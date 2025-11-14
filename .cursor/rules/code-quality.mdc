@@ -1,0 +1,32 @@
+---
+alwaysApply: true
+---
+
+# Code Quality Standards
+
+## Clean Code Principles
+- Write self-documenting code with clear variable and function names
+- Keep functions small and focused on a single responsibility
+- Use meaningful comments only when business logic is complex
+- Prefer composition over inheritance
+- Avoid deep nesting (max 3 levels)
+
+## TypeScript Best Practices
+- Always use explicit types for function parameters and return values
+- Use interfaces for object shapes, types for unions/primitives
+- Prefer `const` over `let`, avoid `var`
+- Use optional chaining (`?.`) and nullish coalescing (`??`)
+- Use strict equality (`===`) over loose equality (`==`)
+
+## Error Handling
+- Always handle errors gracefully with try-catch blocks
+- Provide meaningful error messages to users
+- Log errors for debugging but don't expose sensitive information
+- Use proper HTTP status codes in API responses
+
+## Performance
+- Use React.memo() for expensive components
+- Implement proper loading states
+- Avoid unnecessary re-renders
+- Use pagination for large data sets
+- Implement proper caching strategies

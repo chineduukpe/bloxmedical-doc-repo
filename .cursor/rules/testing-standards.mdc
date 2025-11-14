@@ -1,0 +1,67 @@
+---
+description: Testing and quality assurance standards for the BLOX Medical Admin application
+---
+
+# Testing Standards
+
+## Test Structure
+- Write tests for all API endpoints
+- Test component rendering and user interactions
+- Implement integration tests for critical user flows
+- Use proper test data and cleanup
+
+## API Testing
+- Test all HTTP methods (GET, POST, PUT, DELETE)
+- Test error handling and edge cases
+- Validate response formats and status codes
+- Test authentication and authorization
+
+## Component Testing
+- Test component rendering with different props
+- Test user interactions and event handlers
+- Test loading and error states
+- Test form validation and submission
+
+## Database Testing
+- Test database operations with proper setup/teardown
+- Test data validation and constraints
+- Test error handling for database failures
+- Use test database for isolated testing
+
+## Test Data Management
+- Use consistent test data across tests
+- Implement proper test data cleanup
+- Use factories for creating test objects
+- Mock external dependencies appropriately
+
+## Example Test Patterns
+```typescript
+// API endpoint test
+describe('POST /api/users', () => {
+  it('should create a new user', async () => {
+    const userData = {
+      name: 'Test User',
+      email: 'test@example.com',
+      password: 'password123'
+    };
+    
+    const response = await request(app)
+      .post('/api/users')
+      .send(userData)
+      .expect(201);
+      
+    expect(response.body).toHaveProperty('id');
+    expect(response.body.email).toBe(userData.email);
+  });
+});
+
+// Component test
+describe('UserModal', () => {
+  it('should render form fields', () => {
+    render(<UserModal isOpen={true} onClose={jest.fn()} />);
+    
+    expect(screen.getByLabelText('Full Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+  });
+});
+```

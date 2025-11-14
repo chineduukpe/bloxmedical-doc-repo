@@ -1,0 +1,55 @@
+---
+alwaysApply: true
+---
+
+# Security Best Practices
+
+## Authentication & Authorization
+- Always validate user sessions before protected operations
+- Use proper password hashing with bcrypt
+- Implement secure session management
+- Validate user permissions for sensitive operations
+
+## Data Protection
+- Never expose sensitive data in API responses
+- Use parameterized queries to prevent SQL injection
+- Validate and sanitize all user inputs
+- Implement proper CORS policies
+
+## Password Security
+- Hash passwords with bcrypt (minimum 12 rounds)
+- Never store plain text passwords
+- Implement password strength requirements
+- Use secure password reset mechanisms
+
+## API Security
+- Validate all request parameters
+- Implement rate limiting for API endpoints
+- Use proper HTTP status codes
+- Log security events for monitoring
+
+## Database Security
+- Use connection pooling for database connections
+- Implement proper error handling without exposing internals
+- Use transactions for data consistency
+- Regular security audits of database queries
+
+## Example Security Implementation
+```typescript
+// Password hashing
+const hashedPassword = await bcrypt.hash(password, 12);
+
+// Input validation
+if (!name || !email || !password) {
+  return NextResponse.json(
+    { error: 'Required fields missing' },
+    { status: 400 }
+  );
+}
+
+// SQL injection prevention
+const result = await client.query(
+  'SELECT * FROM "User" WHERE email = $1',
+  [email]
+);
+```

@@ -1,0 +1,43 @@
+---
+description: AWS S3 integration patterns and best practices
+---
+
+# AWS S3 Integration Guidelines
+
+## S3 Configuration
+- Use environment variables for AWS credentials
+- Configure S3 client in API routes
+- Use proper IAM permissions (minimal required access)
+- Set appropriate content types for uploaded files
+
+## File Upload Patterns
+- Generate unique filenames to prevent conflicts
+- Validate file types and sizes before upload
+- Use proper error handling for S3 operations
+- Clean up old files when updating/deleting documents
+
+## Security Best Practices
+- Never expose AWS credentials in client-side code
+- Use server-side API routes for all S3 operations
+- Validate file uploads on the server
+- Implement proper access controls
+
+## Error Handling
+- Handle S3 service errors gracefully
+- Provide meaningful error messages to users
+- Log S3 operations for debugging
+- Implement retry logic for transient failures
+
+## File Management
+- Store file metadata in database
+- Use consistent naming conventions
+- Implement file cleanup on document deletion
+- Consider file versioning for updates
+
+## Environment Variables Required
+```
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_S3_BUCKET=your-bucket-name
+```

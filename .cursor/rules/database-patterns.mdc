@@ -1,0 +1,54 @@
+---
+globs: lib/**/*.ts,app/api/**/*.ts
+---
+
+# Database Development Patterns
+
+## Connection Management
+- Use the centralized connection in [lib/db.ts](mdc:lib/db.ts)
+- Always check connection status before queries
+- Implement proper error handling for connection issues
+- Use connection pooling for better performance
+
+## Query Patterns
+- Use parameterized queries to prevent SQL injection
+- Implement proper error handling for all database operations
+- Use transactions for multi-step operations
+- Log database errors for debugging
+
+## ID Generation
+- Use `cuid()` for generating unique IDs
+- Never use auto-incrementing integers for user-facing IDs
+- Ensure ID uniqueness across all operations
+- Use consistent ID format throughout the application
+
+## Data Validation
+- Validate data before database operations
+- Use proper data types for database fields
+- Implement proper null handling
+- Use database constraints for data integrity
+
+## Example Database Operations
+```typescript
+// Connection and query pattern
+const client = await connectDB();
+const result = await client.query(
+  'SELECT * FROM "User" WHERE email = $1',
+  [email]
+);
+
+// ID generation
+const userId = cuid();
+
+// Insert with proper error handling
+try {
+  const result = await client.query(
+    'INSERT INTO "User" (id, name, email) VALUES ($1, $2, $3)',
+    [userId, name, email]
+  );
+  return result.rows[0];
+} catch (error) {
+  console.error('Database error:', error);
+  throw new Error('Failed to create user');
+}
+```

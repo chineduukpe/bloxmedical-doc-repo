@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+# BLOX Medical Admin - Project Structure Guide
+
+This is a Next.js 14 medical document management application with the following key structure:
+
+## Core Files
+- [app/layout.tsx](mdc:app/layout.tsx) - Root layout with authentication provider
+- [app/page.tsx](mdc:app/page.tsx) - Landing page with login form
+- [app/dashboard/page.tsx](mdc:app/dashboard/page.tsx) - Main dashboard (protected route)
+- [middleware.ts](mdc:middleware.ts) - Authentication middleware
+
+## Authentication
+- [lib/auth.ts](mdc:lib/auth.ts) - NextAuth configuration
+- [components/SessionProvider.tsx](mdc:components/SessionProvider.tsx) - Session context provider
+- [components/LoginForm.tsx](mdc:components/LoginForm.tsx) - Login form component
+
+## Database
+- [prisma/schema.prisma](mdc:prisma/schema.prisma) - Database schema with User, Document models
+- [lib/prisma.ts](mdc:lib/prisma.ts) - Prisma client configuration
+
+## Components
+- [components/Header.tsx](mdc:components/Header.tsx) - Reusable header with BLOX AI branding
+- [components/DocumentRepository.tsx](mdc:components/DocumentRepository.tsx) - Main document management interface
+- [components/DocumentModal.tsx](mdc:components/DocumentModal.tsx) - Modal for adding/editing documents
+
+## API Routes
+- [app/api/documents/route.ts](mdc:app/api/documents/route.ts) - Document CRUD operations
+- [app/api/documents/[id]/route.ts](mdc:app/api/documents/[id]/route.ts) - Individual document operations
+- [app/api/auth/[...nextauth]/route.ts](mdc:app/api/auth/[...nextauth]/route.ts) - Authentication endpoints
+
+## Key Features
+- Document upload to AWS S3
+- Real-time document management
+- Search and filtering
+- Category-based organization
+- User authentication with NextAuth

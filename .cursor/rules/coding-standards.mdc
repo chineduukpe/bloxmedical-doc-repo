@@ -1,0 +1,55 @@
+---
+globs: *.ts,*.tsx
+---
+
+# Coding Standards for BLOX Medical Admin
+
+## TypeScript & React Standards
+
+### Component Structure
+- Use functional components with TypeScript interfaces
+- Define props interfaces with descriptive names
+- Use 'use client' directive for client-side components
+- Prefer async/await over .then() for API calls
+
+### File Organization
+- Components in `/components` directory
+- API routes in `/app/api` directory
+- Database models in `/lib/prisma` directory
+- Types and interfaces in component files or separate type files
+
+### Naming Conventions
+- Components: PascalCase (e.g., `DocumentModal`)
+- Files: PascalCase for components, camelCase for utilities
+- Variables: camelCase
+- Constants: UPPER_SNAKE_CASE
+
+### Error Handling
+- Always wrap API calls in try-catch blocks
+- Provide user-friendly error messages
+- Log errors to console for debugging
+- Use proper HTTP status codes in API routes
+
+### State Management
+- Use useState for local component state
+- Use useEffect for side effects and data fetching
+- Prefer controlled components for forms
+- Handle loading and error states appropriately
+
+### Styling
+- Use Tailwind CSS classes consistently
+- Follow the design system from the screenshot
+- Use responsive design patterns (sm:, md:, lg:)
+- Maintain consistent spacing and typography
+
+### Database Operations
+- Use Prisma for all database operations
+- Always handle database errors gracefully
+- Use transactions for complex operations
+- Validate input data before database operations
+
+### Security
+- Always check authentication in API routes
+- Validate file uploads (type, size)
+- Sanitize user input
+- Use environment variables for sensitive data

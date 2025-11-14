@@ -1,0 +1,58 @@
+---
+globs: *.tsx,*.ts
+---
+
+# React Development Patterns
+
+## Component Patterns
+- Use functional components with hooks
+- Implement proper prop drilling prevention with context
+- Use React.memo() for performance optimization
+- Create custom hooks for reusable logic
+
+## State Management
+- Use useState for local component state
+- Use useEffect for side effects with proper cleanup
+- Implement proper loading and error states
+- Use useCallback and useMemo for performance optimization
+
+## Form Handling
+- Use controlled components for form inputs
+- Implement proper validation with user feedback
+- Handle form submission with loading states
+- Use proper form reset after successful submission
+
+## Event Handling
+- Use proper event types (React.ChangeEvent, React.FormEvent)
+- Implement proper event handlers with error boundaries
+- Use async/await for asynchronous operations
+- Handle loading states during API calls
+
+## Example Component Structure
+```typescript
+interface ComponentProps {
+  // Define props with proper types
+}
+
+export default function Component({ prop1, prop2 }: ComponentProps) {
+  // State declarations
+  const [state, setState] = useState<Type>(initialValue);
+  
+  // Effect hooks
+  useEffect(() => {
+    // Side effects
+  }, [dependencies]);
+  
+  // Event handlers
+  const handleEvent = useCallback((event: EventType) => {
+    // Event logic
+  }, [dependencies]);
+  
+  // Render
+  return (
+    <div>
+      {/* JSX content */}
+    </div>
+  );
+}
+```

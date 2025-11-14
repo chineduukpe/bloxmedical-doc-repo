@@ -1,0 +1,47 @@
+---
+globs: components/*.tsx
+---
+
+# Component Development Patterns
+
+## Reusable Components
+- Create components that can be used across the application
+- Use TypeScript interfaces for props
+- Implement proper prop validation
+- Follow single responsibility principle
+
+## Modal Components
+- Use controlled visibility (isOpen prop)
+- Implement proper focus management
+- Handle escape key and backdrop clicks
+- Provide clear close mechanisms
+
+## Form Components
+- Use controlled inputs with state management
+- Implement proper validation
+- Handle form submission with loading states
+- Provide clear error feedback
+
+## Data Fetching Components
+- Use useEffect for data fetching
+- Implement loading and error states
+- Handle empty states gracefully
+- Optimize re-renders with proper dependencies
+
+## Event Handling
+- Use descriptive event handler names
+- Implement proper event propagation control
+- Handle async operations in event handlers
+- Provide user feedback for actions
+
+## Styling Patterns
+- Use Tailwind CSS utility classes
+- Maintain consistent spacing (p-4, m-2, etc.)
+- Use responsive design patterns
+- Follow the established color scheme (#0A4056 for header)
+
+## Component Composition
+- Break down complex components into smaller pieces
+- Use composition over inheritance
+- Implement proper prop drilling patterns
+- Consider using context for deeply nested props

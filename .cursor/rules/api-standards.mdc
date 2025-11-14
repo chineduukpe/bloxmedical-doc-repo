@@ -1,0 +1,58 @@
+---
+globs: app/api/**/*.ts
+---
+
+# API Development Standards
+
+## RESTful API Design
+- Use proper HTTP methods: GET, POST, PUT, DELETE
+- Implement consistent URL patterns: `/api/resource` and `/api/resource/[id]`
+- Return appropriate HTTP status codes
+- Use proper request/response formats
+
+## Error Handling
+- Always wrap database operations in try-catch blocks
+- Return consistent error response format
+- Log errors for debugging
+- Provide meaningful error messages to clients
+
+## Authentication & Authorization
+- Protect routes with authentication middleware
+- Validate user permissions for sensitive operations
+- Use proper session management
+- Implement rate limiting for security
+
+## Database Operations
+- Use parameterized queries to prevent SQL injection
+- Implement proper connection management
+- Handle database errors gracefully
+- Use transactions for multi-step operations
+
+## Response Format
+```typescript
+// Success response
+return NextResponse.json(data, { status: 200 });
+
+// Error response
+return NextResponse.json(
+  { error: 'Error message' },
+  { status: 400 }
+);
+```
+
+## Example API Route Structure
+```typescript
+export async function GET() {
+  try {
+    const client = await connectDB();
+    const result = await client.query('SELECT * FROM table');
+    return NextResponse.json(result.rows);
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch data' },
+      { status: 500 }
+    );
+  }
+}
+```

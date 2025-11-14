@@ -1,0 +1,47 @@
+---
+globs: components/**/*.tsx,app/**/*.tsx
+---
+
+# UI/UX Consistency Standards
+
+## Design System
+- Use consistent color palette: `#0A4056` (primary), `#107EAA` (accent)
+- Maintain consistent spacing using Tailwind classes
+- Use consistent typography and font weights
+- Implement consistent button styles and hover states
+
+## Component Styling
+- Use Tailwind CSS for all styling
+- Follow consistent class ordering: layout, spacing, colors, typography
+- Use consistent border radius and shadows
+- Implement proper focus states for accessibility
+
+## Form Design
+- Use consistent form field styling
+- Implement proper validation feedback
+- Use consistent button styles for actions
+- Maintain proper spacing between form elements
+
+## Modal Patterns
+- Use consistent modal backdrop and positioning
+- Implement proper close button placement
+- Use consistent modal header styling
+- Maintain proper form layout within modals
+
+## Table Design
+- Use consistent table styling with proper borders
+- Implement hover states for interactive rows
+- Use consistent action button styling
+- Maintain proper spacing and alignment
+
+## Example Styling Patterns
+```tsx
+// Button styling
+className="bg-[#107EAA] text-white px-4 py-2 rounded-md hover:bg-[#0e6b8f] cursor-pointer"
+
+// Form input styling
+className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#107EAA]"
+
+// Modal backdrop
+className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+```

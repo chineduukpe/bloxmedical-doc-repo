@@ -1,4 +1,15 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BLOX Medical Admin Dashboard
+
+This is a [Next.js](https://nextjs.org) medical document management application with role-based access control.
+
+## Features
+
+- **Document Management**: Upload, view, edit, and delete medical documents
+- **User Management**: Create and manage users with different roles (Admin/Collaborator)
+- **Role-Based Access**: Different UI and permissions based on user role
+- **Email Verification**: Send verification emails to new users
+- **Audit Logging**: Track all changes made to users and documents
+- **Automatic Admin Creation**: Admin user is automatically created on startup
 
 ## Getting Started
 
@@ -13,6 +24,16 @@ pnpm dev
 # or
 bun dev
 ```
+
+The application will automatically:
+1. Create an admin user if it doesn't exist
+2. Ensure the admin user has ADMIN role
+3. Start the development server
+
+**Default Admin Credentials:**
+- Email: `admin@bloxmedical.com`
+- Password: `password`
+- Role: `ADMIN`
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 

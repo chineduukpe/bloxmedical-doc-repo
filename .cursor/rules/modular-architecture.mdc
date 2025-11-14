@@ -1,0 +1,40 @@
+---
+alwaysApply: true
+---
+
+# Modular Architecture Guidelines
+
+## Component Structure
+- Create reusable components in [components/](mdc:components/) directory
+- Each component should have a single responsibility
+- Use TypeScript interfaces for component props
+- Export components as default exports
+- Keep components under 200 lines when possible
+
+## File Organization
+```
+components/
+  ├── UserModal.tsx          # User management modal
+  ├── UserRepository.tsx     # User list and management
+  ├── DocumentModal.tsx     # Document management modal
+  ├── DocumentRepository.tsx # Document list and management
+  └── Header.tsx            # Shared header component
+```
+
+## API Routes Structure
+- Place API routes in [app/api/](mdc:app/api/) following RESTful conventions
+- Use proper HTTP methods (GET, POST, PUT, DELETE)
+- Implement consistent error handling across all routes
+- Use middleware for authentication and validation
+
+## Database Layer
+- Keep database logic in [lib/](mdc:lib/) directory
+- Use connection pooling for database connections
+- Implement proper error handling for database operations
+- Use parameterized queries to prevent SQL injection
+
+## Reusable Patterns
+- Create custom hooks for shared logic
+- Use context providers for global state
+- Implement consistent error boundaries
+- Use utility functions for common operations

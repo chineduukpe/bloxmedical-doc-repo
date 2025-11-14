@@ -1,0 +1,32 @@
+---
+alwaysApply: true
+---
+
+# Package Management Rules
+
+## Yarn Only
+- **ALWAYS use yarn** for package management, never npm
+- Use `yarn add` instead of `npm install`
+- Use `yarn remove` instead of `npm uninstall`
+- Use `yarn` instead of `npm run`
+- Use `yarn add --dev` for development dependencies
+
+## Examples
+```bash
+# ✅ Correct
+yarn add cuid
+yarn add --dev @types/node
+yarn remove lodash
+yarn dev
+
+# ❌ Incorrect
+npm install cuid
+npm install --save-dev @types/node
+npm uninstall lodash
+npm run dev
+```
+
+## Lock File Management
+- Always commit `yarn.lock` to version control
+- Never commit `package-lock.json` (delete if present)
+- Use `yarn install` to install dependencies from lock file
