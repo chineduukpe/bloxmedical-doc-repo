@@ -7,7 +7,7 @@ import { connectDB } from '@/lib/db';
 export default async function UsersPage() {
   const session = await auth();
 
-  if (!session) {
+  if (!session || !session.user) {
     redirect('/');
   }
 

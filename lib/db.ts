@@ -5,9 +5,21 @@ const client = new Client({
     'postgresql://chinedu:pandora007@localhost:5432/bloxmedical',
 });
 
+let isConnected = false;
+
 export async function connectDB() {
-  if (!client._connected) {
-    await client.connect();
+  if (!isConnected) {
+    try {
+      await client.connect();
+      isConnected = true;
+    } catch (error: any) {
+      // If already connected, pg will throw an error
+      // Check if it's a connection error or already connected error
+      if (error.code !== '57P03' && !error.message.includes('already')) {
+        throw error;
+      }
+      isConnected = true;
+    }
   }
   return client;
 }
