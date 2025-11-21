@@ -4,6 +4,7 @@ import { connectDB } from './db';
 import bcrypt from 'bcryptjs';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true, // Required for Vercel and production deployments
   providers: [
     CredentialsProvider({
       name: 'credentials',
