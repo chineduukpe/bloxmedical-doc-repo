@@ -48,6 +48,27 @@ export async function PUT(
 
     // If a new file is provided, upload it to S3
     if (file && file.size > 0) {
+      // Validate file type - only allow Word, PDF, and Excel
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ];
+      const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+      const fileExtensionWithDot = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      const isValidType = allowedTypes.includes(file.type.toLowerCase());
+      const isValidExtension = allowedExtensions.includes(fileExtensionWithDot);
+      
+      if (!isValidType && !isValidExtension) {
+        return NextResponse.json(
+          { error: 'Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.' },
+          { status: 400 }
+        );
+      }
+
       // Delete old file from S3
       const existingDocument = await prisma.document.findUnique({
         where: { id },
@@ -66,10 +87,10 @@ export async function PUT(
       }
 
       // Upload new file
-      const fileExtension = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
-        .substring(2)}.${fileExtension}`;
+        .substring(2)}.${fileExt}`;
       const key = `documents/${fileName}`;
 
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -122,16 +143,22 @@ export async function DELETE(
       );
     }
 
-    // Delete file from S3
+    // Delete file from S3 (non-blocking - continue even if S3 deletion fails)
     if (document.fileUrl) {
-      const key = document.fileUrl.split('/').pop();
-      if (key) {
-        await s3Client.send(
-          new DeleteObjectCommand({
-            Bucket: process.env.AWS_S3_BUCKET!,
-            Key: `documents/${key}`,
-          })
-        );
+      try {
+        const urlParts = document.fileUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        if (fileName) {
+          await s3Client.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.AWS_S3_BUCKET!,
+              Key: `documents/${fileName}`,
+            })
+          );
+        }
+      } catch (s3Error) {
+        // Log S3 deletion error but continue with database deletion
+        console.error('Error deleting file from S3 (continuing with database deletion):', s3Error);
       }
     }
 

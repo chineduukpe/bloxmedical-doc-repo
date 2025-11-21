@@ -1,31 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DocumentModal from './DocumentModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
-import PDFViewModal from './PDFViewModal';
+import DocumentViewModal from './DocumentViewModal';
 import { toast } from 'sonner';
-import { aiService } from '@/lib/ai-service';
-
-interface AIServiceDocument {
-  name: string;
-  size_bytes: number;
-  modified: string;
-  extension: string;
-}
-
-interface AIServiceResponse {
-  documents: AIServiceDocument[];
-  documents_folder: string;
-  pagination: {
-    current_page: number;
-    per_page: number;
-    total_documents: number;
-    total_pages: number;
-    has_next: boolean;
-    has_previous: boolean;
-  };
-}
 
 interface Document {
   id: string;
@@ -36,6 +15,7 @@ interface Document {
   fileType?: string;
   uploadDate: string;
   lastEdited: string;
+  embeddingStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 }
 
 interface DocumentRepositoryProps {
@@ -57,67 +37,25 @@ export default function DocumentRepository({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
   const [pdfDocument, setPdfDocument] = useState<Document | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [users, setUsers] = useState<any[]>([]);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [pagination, setPagination] = useState<
-    AIServiceResponse['pagination'] | null
-  >(null);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Map AI service document to Document interface
-  const mapAIDocumentToDocument = (
-    aiDoc: AIServiceDocument,
-    baseUrl: string
-  ): Document => {
-    // Extract category from filename if possible (e.g., "Cardiology- Document.docx")
-    const categoryMatch = aiDoc.name.match(/^([^-]+)-/);
-    const category = categoryMatch ? categoryMatch[1].trim() : 'General';
-
-    // Generate file type from extension
-    const fileType = aiDoc.extension.startsWith('.')
-      ? `application/${aiDoc.extension.substring(1)}`
-      : `application/${aiDoc.extension}`;
-
-    // Generate a file URL (you may need to adjust this based on your actual file serving setup)
-    const fileUrl = baseUrl
-      ? `${baseUrl}/documents/${encodeURIComponent(aiDoc.name)}`
-      : '';
-
-    return {
-      id: aiDoc.name, // Use name as ID since AI service doesn't provide ID
-      name: aiDoc.name,
-      description: `Document file: ${aiDoc.name}`,
-      category: category,
-      fileUrl: fileUrl,
-      fileType: fileType,
-      uploadDate: aiDoc.modified,
-      lastEdited: aiDoc.modified,
-    };
-  };
-
-  // Fetch documents from AI service
-  const fetchDocuments = async (page: number = 1, limit: number = 50) => {
+  // Fetch documents from database
+  const fetchDocuments = async () => {
     try {
       setIsLoading(true);
-      const response = await aiService.get<AIServiceResponse>('/documents', {
-        params: {
-          page,
-          limit,
-        },
-      });
+      const response = await fetch('/api/documents');
 
-      if (response.data) {
-        const baseUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL || '';
-        const mappedDocuments = response.data.documents.map((doc) =>
-          mapAIDocumentToDocument(doc, baseUrl)
-        );
-        setDocuments(mappedDocuments);
-        setPagination(response.data.pagination);
-        setCurrentPage(response.data.pagination.current_page);
+      if (response.ok) {
+        const data = await response.json();
+        setDocuments(data.documents || []);
+      } else {
+        toast.error('Failed to fetch documents');
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
-      toast.error('Failed to fetch documents from AI service');
+      toast.error('Failed to fetch documents');
     } finally {
       setIsLoading(false);
     }
@@ -137,12 +75,11 @@ export default function DocumentRepository({
   };
 
   useEffect(() => {
-    fetchDocuments(currentPage, itemsPerPage);
+    fetchDocuments();
     fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage]);
+  }, []);
 
-  // Filter documents based on search term (client-side filtering on fetched documents)
+  // Filter documents based on search term
   const filteredDocuments = documents.filter(
     (doc) =>
       doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -150,29 +87,15 @@ export default function DocumentRepository({
       doc.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Use server-side pagination from API response
-  const totalPages = pagination?.total_pages || 1;
-  const paginatedDocuments = filteredDocuments; // Documents are already paginated from server
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    if (searchTerm) {
-      // For search, we might want to fetch all documents or implement server-side search
-      // For now, we'll just filter client-side on the current page
-    } else {
-      setCurrentPage(1);
-    }
-  }, [searchTerm]);
-
   // Calculate summary statistics
-  const totalDocuments = pagination?.total_documents || documents.length;
-  const cardiologyCount = documents.filter(
+  const totalDocuments = filteredDocuments.length;
+  const cardiologyCount = filteredDocuments.filter(
     (doc) => doc.category === 'Cardiology'
   ).length;
-  const gastrointestinalCount = documents.filter(
+  const gastrointestinalCount = filteredDocuments.filter(
     (doc) => doc.category === 'Gastrointestinal'
   ).length;
-  const urgentCareCount = documents.filter(
+  const urgentCareCount = filteredDocuments.filter(
     (doc) => doc.category === 'Urgent Care'
   ).length;
 
@@ -192,7 +115,7 @@ export default function DocumentRepository({
       });
 
       if (response.ok) {
-        await fetchDocuments(currentPage, itemsPerPage);
+        await fetchDocuments();
         setIsModalOpen(false);
         toast.success('Document uploaded successfully!');
       } else {
@@ -202,6 +125,48 @@ export default function DocumentRepository({
     } catch (error) {
       console.error('Error creating document:', error);
       toast.error('Failed to upload document');
+    }
+  };
+
+  const handleBulkUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    setIsBulkUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      const response = await fetch('/api/documents/bulk', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        await fetchDocuments();
+        toast.success(`Successfully uploaded ${data.count} document(s)!`);
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to upload documents');
+      }
+    } catch (error) {
+      console.error('Error bulk uploading documents:', error);
+      toast.error('Failed to upload documents');
+    } finally {
+      setIsBulkUploading(false);
     }
   };
 
@@ -223,7 +188,7 @@ export default function DocumentRepository({
       });
 
       if (response.ok) {
-        await fetchDocuments(currentPage, itemsPerPage);
+        await fetchDocuments();
         setEditingDocument(null);
         setIsModalOpen(false);
         toast.success('Document updated successfully!');
@@ -252,7 +217,7 @@ export default function DocumentRepository({
       });
 
       if (response.ok) {
-        await fetchDocuments(currentPage, itemsPerPage);
+        await fetchDocuments();
         setIsDeleteModalOpen(false);
         setDocumentToDelete(null);
         toast.success('Document deleted successfully!');
@@ -322,17 +287,112 @@ export default function DocumentRepository({
 
   const formatFileType = (fileType: string | undefined) => {
     if (!fileType) return 'Unknown';
-    const extension = fileType.split('/')[1]?.toUpperCase();
-    return extension || 'Unknown';
+
+    // Normalize to lowercase for comparison
+    const normalizedType = fileType.toLowerCase().trim();
+
+    // Map long MIME types to short file type names
+    const mimeTypeMap: Record<string, string> = {
+      // Word documents
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        'DOCX',
+      'application/msword': 'DOC',
+      // PDF
+      'application/pdf': 'PDF',
+      // Excel spreadsheets
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        'XLSX',
+      'application/vnd.ms-excel': 'XLS',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.template':
+        'XLTX',
+      'application/vnd.ms-excel.template.macroEnabled.12': 'XLTM',
+      // PowerPoint presentations
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        'PPTX',
+      'application/vnd.ms-powerpoint': 'PPT',
+      // Text files
+      'text/plain': 'TXT',
+      'text/csv': 'CSV',
+      // Images
+      'image/jpeg': 'JPG',
+      'image/png': 'PNG',
+      'image/gif': 'GIF',
+    };
+
+    // Check if we have a mapping for this MIME type
+    if (mimeTypeMap[normalizedType]) {
+      return mimeTypeMap[normalizedType];
+    }
+
+    // Fallback: try to extract extension from MIME type
+    const parts = fileType.split('/');
+    if (parts.length > 1) {
+      const subtype = parts[1].toUpperCase();
+      // If it's a simple type like "pdf", return it as is
+      if (subtype.length <= 5 && !subtype.includes('.')) {
+        return subtype;
+      }
+      // Otherwise try to extract meaningful part
+      const lastPart = subtype.split('.').pop();
+      return lastPart || 'Unknown';
+    }
+
+    return 'Unknown';
+  };
+
+  const getEmbeddingStatusBadge = (status: string | undefined) => {
+    if (!status) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Unknown
+        </span>
+      );
+    }
+
+    const statusConfig: Record<
+      string,
+      { label: string; bgColor: string; textColor: string }
+    > = {
+      PENDING: {
+        label: 'Pending',
+        bgColor: 'bg-yellow-100',
+        textColor: 'text-yellow-800',
+      },
+      PROCESSING: {
+        label: 'Processing',
+        bgColor: 'bg-blue-100',
+        textColor: 'text-blue-800',
+      },
+      COMPLETED: {
+        label: 'Completed',
+        bgColor: 'bg-green-100',
+        textColor: 'text-green-800',
+      },
+      FAILED: {
+        label: 'Failed',
+        bgColor: 'bg-red-100',
+        textColor: 'text-red-800',
+      },
+    };
+
+    const config = statusConfig[status] || statusConfig.PENDING;
+
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}
+      >
+        {config.label}
+      </span>
+    );
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-[92px]">
       {/* Title, Collaborators, Search and Add Document */}
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            Document Repository
+            Database Files
           </h1>
           <div className="flex items-center space-x-2">
             <div className="flex -space-x-2">
@@ -370,27 +430,54 @@ export default function DocumentRepository({
               className="block w-80 pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#107EAA] focus:border-[#107EAA]"
             />
           </div>
-          {userRole === 'ADMIN' && (
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-[#107EAA] text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-[#0e6b8f] cursor-pointer"
+          {/* Temporarily removed admin condition */}
+          <button
+            onClick={handleBulkUploadClick}
+            disabled={isBulkUploading}
+            className="bg-gray-600 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              <span>Add New Document</span>
-            </button>
-          )}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+            <span>{isBulkUploading ? 'Uploading...' : 'Bulk Upload'}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.xls,.xlsx"
+            onChange={handleBulkUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#107EAA] text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-[#0e6b8f] cursor-pointer"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            <span>Add New Document</span>
+          </button>
         </div>
       </div>
 
@@ -447,6 +534,9 @@ export default function DocumentRepository({
                   Last Edited
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Embedding Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -455,23 +545,23 @@ export default function DocumentRepository({
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     Loading documents...
                   </td>
                 </tr>
-              ) : paginatedDocuments.length === 0 ? (
+              ) : filteredDocuments.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     No documents found
                   </td>
                 </tr>
               ) : (
-                paginatedDocuments.map((document) => (
+                filteredDocuments.map((document) => (
                   <tr key={document.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {document.name}
@@ -505,6 +595,9 @@ export default function DocumentRepository({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(document.lastEdited)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getEmbeddingStatusBadge(document.embeddingStatus)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex space-x-2">
@@ -588,82 +681,6 @@ export default function DocumentRepository({
         </div>
       </div>
 
-      {/* Pagination */}
-      <div className="flex justify-center mt-8">
-        <div className="bg-white rounded-lg p-4 w-fit">
-          <div className="flex justify-between items-center space-x-8">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-700">Now Showing</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                  fetchDocuments(1, Number(e.target.value));
-                }}
-                className="border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#107EAA] focus:border-[#107EAA]"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span className="text-sm text-gray-700">results per page</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => {
-                  const newPage = Math.max(1, currentPage - 1);
-                  fetchDocuments(newPage, itemsPerPage);
-                }}
-                disabled={!pagination?.has_previous || currentPage === 1}
-                className="w-8 h-8 rounded-full border border-gray-300 bg-white flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {currentPage} of {totalPages} (
-                {pagination?.total_documents || 0} total)
-              </span>
-              <button
-                onClick={() => {
-                  const newPage = Math.min(totalPages, currentPage + 1);
-                  fetchDocuments(newPage, itemsPerPage);
-                }}
-                disabled={!pagination?.has_next || currentPage === totalPages}
-                className="w-8 h-8 rounded-full border border-gray-300 bg-white flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Document Modal */}
       <DocumentModal
         isOpen={isModalOpen}
@@ -685,8 +702,8 @@ export default function DocumentRepository({
         isDeleting={isDeleting}
       />
 
-      {/* PDF View Modal */}
-      <PDFViewModal
+      {/* Document View Modal */}
+      <DocumentViewModal
         isOpen={isPDFModalOpen}
         onClose={() => {
           setIsPDFModalOpen(false);
@@ -694,6 +711,7 @@ export default function DocumentRepository({
         }}
         fileUrl={pdfDocument?.fileUrl || ''}
         documentName={pdfDocument?.name || ''}
+        fileType={pdfDocument?.fileType}
       />
     </main>
   );

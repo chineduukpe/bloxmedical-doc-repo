@@ -77,21 +77,29 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+enum EmbeddingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model Document {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  category    String
-  fileUrl     String
-  fileType    String?
-  uploadDate  DateTime @default(now())
-  lastEdited  DateTime @updatedAt
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdBy   String?
-  updatedBy   String?
-  creator     User?    @relation("DocumentCreator", fields: [createdBy], references: [id])
-  updater     User?    @relation("DocumentUpdater", fields: [updatedBy], references: [id])
+  id              String          @id @default(cuid())
+  name            String
+  description     String
+  category        String
+  fileUrl         String
+  fileType        String?
+  uploadDate      DateTime        @default(now())
+  lastEdited      DateTime        @updatedAt
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy       String?
+  updatedBy       String?
+  creator         User?           @relation("DocumentCreator", fields: [createdBy], references: [id])
+  updater         User?           @relation("DocumentUpdater", fields: [updatedBy], references: [id])
+  embeddingStatus EmbeddingStatus @default(PENDING)
 }
 
 model AuditLog {

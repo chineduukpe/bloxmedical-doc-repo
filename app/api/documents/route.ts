@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
+import { embedDocuments } from '@/lib/ai-service';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -31,6 +32,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate file type - only allow Word, PDF, and Excel
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+    const fileExtensionWithDot = '.' + file.name.split('.').pop()?.toLowerCase();
+    
+    const isValidType = allowedTypes.includes(file.type.toLowerCase());
+    const isValidExtension = allowedExtensions.includes(fileExtensionWithDot);
+    
+    if (!isValidType && !isValidExtension) {
+      return NextResponse.json(
+        { error: 'Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.' },
+        { status: 400 }
+      );
+    }
+
     // Generate unique filename
     const fileExtension = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random()
@@ -49,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     await s3Client.send(uploadCommand);
 
-    // Save to database
+    // Save to database with PENDING embedding status
     const document = await prisma.document.create({
       data: {
         name,
@@ -59,10 +81,52 @@ export async function POST(request: NextRequest) {
         fileType: file.type,
         uploadDate: new Date(),
         lastEdited: new Date(),
+        embeddingStatus: 'PENDING',
       },
     });
 
-    return NextResponse.json({ document });
+    // Update status to PROCESSING and send to AI service
+    try {
+      await prisma.document.update({
+        where: { id: document.id },
+        data: { embeddingStatus: 'PROCESSING' },
+      });
+
+      // Call the embed endpoint with the file
+      const embedResponse = await embedDocuments(
+        buffer,
+        file.name,
+        file.type
+      );
+
+      // If successful (200), update status to COMPLETED
+      if (embedResponse.status === 200) {
+        await prisma.document.update({
+          where: { id: document.id },
+          data: { embeddingStatus: 'COMPLETED' },
+        });
+      } else {
+        // If not 200, mark as FAILED
+        await prisma.document.update({
+          where: { id: document.id },
+          data: { embeddingStatus: 'FAILED' },
+        });
+      }
+    } catch (embedError) {
+      // If embedding fails, mark as FAILED but don't fail the entire request
+      console.error('Error embedding document:', embedError);
+      await prisma.document.update({
+        where: { id: document.id },
+        data: { embeddingStatus: 'FAILED' },
+      });
+    }
+
+    // Fetch the updated document to return
+    const updatedDocument = await prisma.document.findUnique({
+      where: { id: document.id },
+    });
+
+    return NextResponse.json({ document: updatedDocument });
   } catch (error) {
     console.error('Error uploading document:', error);
     return NextResponse.json(

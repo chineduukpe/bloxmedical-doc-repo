@@ -23,6 +23,7 @@
     "bcryptjs": "^3.0.2",
     "cuid": "^3.0.0",
     "dotenv": "^17.2.3",
+    "form-data": "^4.0.5",
     "next": "16.0.0",
     "next-auth": "^5.0.0-beta.29",
     "nodemailer": "^7.0.10",

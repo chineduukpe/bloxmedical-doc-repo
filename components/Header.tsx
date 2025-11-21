@@ -61,32 +61,41 @@ export default function Header({ user }: HeaderProps) {
                     : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
                 }`}
               >
-                Documents
+                Database Files
               </Link>
-              {user?.role === 'ADMIN' && (
-                <>
-                  <Link
-                    href="/users"
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      pathname === '/users'
-                        ? 'bg-[#107EAA] text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
-                    }`}
-                  >
-                    Users
-                  </Link>
-                  <Link
-                    href="/audit-logs"
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      pathname === '/audit-logs'
-                        ? 'bg-[#107EAA] text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
-                    }`}
-                  >
-                    Audit Logs
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/files"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  pathname === '/files'
+                    ? 'bg-[#107EAA] text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
+                }`}
+              >
+                API Documents
+              </Link>
+              {/* Temporarily removed admin condition */}
+              <>
+                <Link
+                  href="/users"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === '/users'
+                      ? 'bg-[#107EAA] text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
+                  }`}
+                >
+                  Users
+                </Link>
+                <Link
+                  href="/audit-logs"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === '/audit-logs'
+                      ? 'bg-[#107EAA] text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
+                  }`}
+                >
+                  Audit Logs
+                </Link>
+              </>
             </nav>
           </div>
 

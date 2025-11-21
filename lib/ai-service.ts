@@ -1,4 +1,5 @@
 import axios from 'axios';
+import FormData from 'form-data';
 
 const baseURL = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
 
@@ -22,3 +23,69 @@ aiService.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Upload and embed documents for RAG functionality
+ * @param fileBuffer Buffer containing the file data
+ * @param fileName Original filename
+ * @param contentType MIME type of the file
+ * @returns Promise with the response from the embed endpoint
+ */
+export async function embedDocuments(
+  fileBuffer: Buffer,
+  fileName: string,
+  contentType: string
+): Promise<any> {
+  if (!baseURL) {
+    throw new Error('AI Service URL is not configured');
+  }
+
+  const formData = new FormData();
+  
+  // Add the file to the form data
+  formData.append('files', fileBuffer, {
+    filename: fileName,
+    contentType: contentType,
+  });
+
+  const response = await axios.post(`${baseURL}/embed`, formData, {
+    headers: {
+      ...formData.getHeaders(),
+    },
+    timeout: 60000, // Longer timeout for file uploads
+  });
+
+  return response;
+}
+
+/**
+ * Upload and embed multiple documents for RAG functionality
+ * @param files Array of objects containing fileBuffer, fileName, and contentType
+ * @returns Promise with the response from the embed endpoint
+ */
+export async function embedBulkDocuments(
+  files: Array<{ fileBuffer: Buffer; fileName: string; contentType: string }>
+): Promise<any> {
+  if (!baseURL) {
+    throw new Error('AI Service URL is not configured');
+  }
+
+  const formData = new FormData();
+  
+  // Add all files to the form data
+  files.forEach((file) => {
+    formData.append('files', file.fileBuffer, {
+      filename: file.fileName,
+      contentType: file.contentType,
+    });
+  });
+
+  const response = await axios.post(`${baseURL}/embed`, formData, {
+    headers: {
+      ...formData.getHeaders(),
+    },
+    timeout: 300000, // Longer timeout for bulk uploads (5 minutes)
+  });
+
+  return response;
+}
