@@ -89,3 +89,20 @@ export async function embedBulkDocuments(
 
   return response;
 }
+
+/**
+ * Delete a document from the AI service
+ * @param fileName The filename of the document to delete
+ * @returns Promise with the response from the delete endpoint
+ */
+export async function deleteDocument(fileName: string): Promise<any> {
+  if (!baseURL) {
+    throw new Error('AI Service URL is not configured');
+  }
+
+  const response = await aiService.delete(`/documents/${encodeURIComponent(fileName)}`, {
+    timeout: 30000,
+  });
+
+  return response;
+}
