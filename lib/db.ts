@@ -1,8 +1,7 @@
 import { Client } from 'pg';
 
 const client = new Client({
-  connectionString:
-    'postgresql://chinedu:pandora007@localhost:5432/bloxmedical',
+  connectionString: process.env.DATABASE_URL,
 });
 
 let isConnected = false;
