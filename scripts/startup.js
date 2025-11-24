@@ -15,7 +15,7 @@ async function ensureAdminExists() {
 
     // Check if admin user exists
     const adminCheck = await client.query(
-      'SELECT id, role FROM "User" WHERE email = $1',
+      'SELECT id, role FROM "bloxadmin_User" WHERE email = $1',
       ['admin@bloxmedical.com']
     );
 
@@ -27,7 +27,7 @@ async function ensureAdminExists() {
       const adminId = require('cuid')();
 
       await client.query(
-        `INSERT INTO "User" (id, name, email, password, role, "emailVerified", "createdAt", "updatedAt") 
+        `INSERT INTO "bloxadmin_User" (id, name, email, password, role, "emailVerified", "createdAt", "updatedAt") 
          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
         [
           adminId,
@@ -52,7 +52,7 @@ async function ensureAdminExists() {
       if (admin.role !== 'ADMIN') {
         console.log('🔐 Updating admin role to ADMIN...');
         await client.query(
-          'UPDATE "User" SET role = $1, "updatedAt" = NOW() WHERE id = $2',
+          'UPDATE "bloxadmin_User" SET role = $1, "updatedAt" = NOW() WHERE id = $2',
           ['ADMIN', admin.id]
         );
         console.log('✅ Admin role updated to ADMIN');

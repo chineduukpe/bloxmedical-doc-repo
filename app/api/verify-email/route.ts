@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     // Find the verification token
     const tokenResult = await client.query(
-      'SELECT * FROM "VerificationToken" WHERE token = $1 AND expires > NOW()',
+      'SELECT * FROM "bloxadmin_VerificationToken" WHERE token = $1 AND expires > NOW()',
       [token]
     );
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Update user's email verification status
     const userResult = await client.query(
-      'UPDATE "User" SET "emailVerified" = NOW() WHERE email = $1 RETURNING id, name, email',
+      'UPDATE "bloxadmin_User" SET "emailVerified" = NOW() WHERE email = $1 RETURNING id, name, email',
       [email]
     );
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete the used verification token
-    await client.query('DELETE FROM "VerificationToken" WHERE token = $1', [
+    await client.query('DELETE FROM "bloxadmin_VerificationToken" WHERE token = $1', [
       token,
     ]);
 

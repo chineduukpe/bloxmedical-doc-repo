@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const client = await connectDB();
     const result = await client.query(
-      'SELECT id, name, email, "emailVerified", image, disabled, "createdAt" FROM "User" ORDER BY "createdAt" DESC'
+      'SELECT id, name, email, "emailVerified", image, disabled, "createdAt" FROM "bloxadmin_User" ORDER BY "createdAt" DESC'
     );
 
     return NextResponse.json(result.rows);
@@ -50,7 +50,7 @@ export const POST = requireAdmin(async (request: NextRequest, user: any) => {
 
     // Check if user already exists
     const existingUser = await client.query(
-      'SELECT id FROM "User" WHERE email = $1',
+      'SELECT id FROM "bloxadmin_User" WHERE email = $1',
       [email]
     );
 
@@ -69,7 +69,7 @@ export const POST = requireAdmin(async (request: NextRequest, user: any) => {
 
     // Create the user
     const result = await client.query(
-      'INSERT INTO "User" (id, name, email, password, role, "createdBy", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING id, name, email, role, "createdAt"',
+      'INSERT INTO "bloxadmin_User" (id, name, email, password, role, "createdBy", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING id, name, email, role, "createdAt"',
       [userId, name, email, hashedPassword, role, user.id]
     );
 
@@ -81,7 +81,7 @@ export const POST = requireAdmin(async (request: NextRequest, user: any) => {
 
     // Store verification token
     await client.query(
-      'INSERT INTO "VerificationToken" (id, identifier, token, expires) VALUES ($1, $2, $3, $4)',
+      'INSERT INTO "bloxadmin_VerificationToken" (id, identifier, token, expires) VALUES ($1, $2, $3, $4)',
       [cuid(), email, token, expires]
     );
 

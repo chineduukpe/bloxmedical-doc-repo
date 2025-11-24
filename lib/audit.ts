@@ -14,7 +14,7 @@ export async function logAudit(entry: AuditLogEntry) {
     const client = await connectDB();
 
     await client.query(
-      `INSERT INTO "AuditLog" (id, "tableName", "recordId", action, "oldValues", "newValues", "userId", "createdAt") 
+      `INSERT INTO "bloxadmin_AuditLog" (id, "tableName", "recordId", action, "oldValues", "newValues", "userId", "createdAt") 
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
       [
         require('cuid')(),
@@ -42,8 +42,8 @@ export async function getAuditLogs(
 
     let query = `
       SELECT al.*, u.name as "userName", u.email as "userEmail"
-      FROM "AuditLog" al
-      JOIN "User" u ON al."userId" = u.id
+      FROM "bloxadmin_AuditLog" al
+      JOIN "bloxadmin_User" u ON al."userId" = u.id
     `;
 
     const conditions = [];

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     try {
       // Get current user data
       const userResult = await client.query(
-        'SELECT id, password FROM "User" WHERE id = $1',
+        'SELECT id, password FROM "bloxadmin_User" WHERE id = $1',
         [session.user.id]
       );
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
       // Update password in database
       await client.query(
-        'UPDATE "User" SET password = $1, "updatedAt" = NOW() WHERE id = $2',
+        'UPDATE "bloxadmin_User" SET password = $1, "updatedAt" = NOW() WHERE id = $2',
         [hashedNewPassword, session.user.id]
       );
 

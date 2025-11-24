@@ -12,19 +12,19 @@ async function migrateUsers() {
 
     // Add disabled column if it doesn't exist
     await client.query(`
-      ALTER TABLE "User" 
+      ALTER TABLE "bloxadmin_User" 
       ADD COLUMN IF NOT EXISTS disabled BOOLEAN DEFAULT false
     `);
 
     // Add createdAt column if it doesn't exist
     await client.query(`
-      ALTER TABLE "User" 
+      ALTER TABLE "bloxadmin_User" 
       ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP DEFAULT NOW()
     `);
 
     // Add updatedAt column if it doesn't exist
     await client.query(`
-      ALTER TABLE "User" 
+      ALTER TABLE "bloxadmin_User" 
       ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP DEFAULT NOW()
     `);
 

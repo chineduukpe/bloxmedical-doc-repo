@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://chinedu:pandora007@localhost:5432/bloxmedical"
+  url      = env("DATABASE_URL")
 }
 
 model Account {
@@ -27,6 +27,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@map("bloxadmin_Account")
 }
 
 model Session {
@@ -35,6 +36,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("bloxadmin_Session")
 }
 
 model User {
@@ -60,6 +63,8 @@ model User {
   createdDocuments Document[] @relation("DocumentCreator")
   updatedDocuments Document[] @relation("DocumentUpdater")
   auditLogs     AuditLog[]
+
+  @@map("bloxadmin_User")
 }
 
 enum UserRole {
@@ -75,6 +80,7 @@ model VerificationToken {
   createdAt  DateTime @default(now())
 
   @@unique([identifier, token])
+  @@map("bloxadmin_VerificationToken")
 }
 
 enum EmbeddingStatus {
@@ -100,6 +106,8 @@ model Document {
   creator         User?           @relation("DocumentCreator", fields: [createdBy], references: [id])
   updater         User?           @relation("DocumentUpdater", fields: [updatedBy], references: [id])
   embeddingStatus EmbeddingStatus @default(PENDING)
+
+  @@map("bloxadmin_Document")
 }
 
 model AuditLog {
@@ -112,4 +120,6 @@ model AuditLog {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
+  @@map("bloxadmin_AuditLog")
 }

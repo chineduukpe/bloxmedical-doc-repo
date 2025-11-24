@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // Get user details
     const userResult = await client.query(
-      'SELECT id, name, email, "emailVerified" FROM "User" WHERE id = $1',
+      'SELECT id, name, email, "emailVerified" FROM "bloxadmin_User" WHERE id = $1',
       [userId]
     );
 
@@ -48,13 +48,13 @@ export async function POST(request: NextRequest) {
 
     // Delete any existing verification tokens for this user
     await client.query(
-      'DELETE FROM "VerificationToken" WHERE identifier = $1',
+      'DELETE FROM "bloxadmin_VerificationToken" WHERE identifier = $1',
       [user.email]
     );
 
     // Store new verification token
     await client.query(
-      'INSERT INTO "VerificationToken" (id, identifier, token, expires) VALUES ($1, $2, $3, $4)',
+      'INSERT INTO "bloxadmin_VerificationToken" (id, identifier, token, expires) VALUES ($1, $2, $3, $4)',
       [cuid(), user.email, token, expires]
     );
 

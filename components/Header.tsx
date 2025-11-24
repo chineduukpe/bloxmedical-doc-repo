@@ -63,7 +63,7 @@ export default function Header({ user }: HeaderProps) {
               >
                 Database Files
               </Link>
-              <Link
+              {/* <Link
                 href="/files"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   pathname === '/files'
@@ -72,7 +72,7 @@ export default function Header({ user }: HeaderProps) {
                 }`}
               >
                 API Documents
-              </Link>
+              </Link> */}
               {/* Temporarily removed admin condition */}
               <>
                 <Link

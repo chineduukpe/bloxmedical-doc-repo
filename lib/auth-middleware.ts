@@ -19,7 +19,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
 
     const client = await connectDB();
     const result = await client.query(
-      'SELECT id, name, email, role FROM "User" WHERE id = $1',
+      'SELECT id, name, email, role FROM "bloxadmin_User" WHERE id = $1',
       [session.user.id]
     );
 

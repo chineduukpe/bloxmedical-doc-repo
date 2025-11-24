@@ -13,7 +13,7 @@ export async function GET(
     const { id } = await params;
     const client = await connectDB();
     const result = await client.query(
-      'SELECT id, name, email, "emailVerified", image, disabled, "createdAt" FROM "User" WHERE id = $1',
+      'SELECT id, name, email, "emailVerified", image, disabled, "createdAt" FROM "bloxadmin_User" WHERE id = $1',
       [id]
     );
 
@@ -45,7 +45,7 @@ export const PUT = requireAdmin(
 
       // Check if user exists
       const existingUser = await client.query(
-        'SELECT id FROM "User" WHERE id = $1',
+        'SELECT id FROM "bloxadmin_User" WHERE id = $1',
         [id]
       );
 
@@ -56,7 +56,7 @@ export const PUT = requireAdmin(
       // Check if email is being changed and if it's already taken
       if (email) {
         const emailCheck = await client.query(
-          'SELECT id FROM "User" WHERE email = $1 AND id != $2',
+          'SELECT id FROM "bloxadmin_User" WHERE email = $1 AND id != $2',
           [email, id]
         );
 
@@ -116,7 +116,7 @@ export const PUT = requireAdmin(
       values.push(id);
       values.push(user.id);
 
-      const query = `UPDATE "User" SET ${updates.join(
+      const query = `UPDATE "bloxadmin_User" SET ${updates.join(
         ', '
       )} WHERE id = $${paramCount} RETURNING id, name, email, disabled, role, "createdAt"`;
 
@@ -155,7 +155,7 @@ export const DELETE = requireAdmin(
 
       // Check if user exists
       const existingUser = await client.query(
-        'SELECT id FROM "User" WHERE id = $1',
+        'SELECT id FROM "bloxadmin_User" WHERE id = $1',
         [id]
       );
 
@@ -172,7 +172,7 @@ export const DELETE = requireAdmin(
       });
 
       // Delete the user (this will cascade delete related records due to foreign key constraints)
-      await client.query('DELETE FROM "User" WHERE id = $1', [id]);
+      await client.query('DELETE FROM "bloxadmin_User" WHERE id = $1', [id]);
 
       return NextResponse.json({ message: 'User deleted successfully' });
     } catch (error) {

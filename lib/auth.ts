@@ -19,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const client = await connectDB();
         const result = await client.query(
-          'SELECT * FROM "User" WHERE email = $1',
+          'SELECT * FROM "bloxadmin_User" WHERE email = $1',
           [credentials.email]
         );
 

@@ -14,7 +14,7 @@ export default async function AuditLogsPage() {
   // Fetch user role from database
   const client = await connectDB();
   const userResult = await client.query(
-    'SELECT role FROM "User" WHERE id = $1',
+    'SELECT role FROM "bloxadmin_User" WHERE id = $1',
     [session.user.id]
   );
 

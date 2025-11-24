@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       // Find the reset token (using prefix to distinguish from email verification)
       // First find the token, then check if it's a reset token
       const tokenResult = await client.query(
-        'SELECT * FROM "VerificationToken" WHERE token = $1 AND expires > NOW()',
+        'SELECT * FROM "bloxadmin_VerificationToken" WHERE token = $1 AND expires > NOW()',
         [token]
       );
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
       // Get user by email
       const userResult = await client.query(
-        'SELECT id, password FROM "User" WHERE email = $1',
+        'SELECT id, password FROM "bloxadmin_User" WHERE email = $1',
         [email]
       );
 
@@ -95,12 +95,12 @@ export async function POST(request: NextRequest) {
 
       // Update password in database
       await client.query(
-        'UPDATE "User" SET password = $1, "updatedAt" = NOW() WHERE id = $2',
+        'UPDATE "bloxadmin_User" SET password = $1, "updatedAt" = NOW() WHERE id = $2',
         [hashedPassword, user.id]
       );
 
       // Delete the used reset token
-      await client.query('DELETE FROM "VerificationToken" WHERE token = $1', [
+      await client.query('DELETE FROM "bloxadmin_VerificationToken" WHERE token = $1', [
         token,
       ]);
 

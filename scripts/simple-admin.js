@@ -16,21 +16,21 @@ async function createAdmin() {
 
     // Check if user already exists
     const existingUser = await client.query(
-      'SELECT id FROM "User" WHERE email = $1',
+      'SELECT id FROM "bloxadmin_User" WHERE email = $1',
       ['admin@bloxmedical.com']
     );
 
     if (existingUser.rows.length > 0) {
       // Update existing user
       await client.query(
-        'UPDATE "User" SET password = $1, name = $2 WHERE email = $3',
+        'UPDATE "bloxadmin_User" SET password = $1, name = $2 WHERE email = $3',
         [hashedPassword, 'Admin User', 'admin@bloxmedical.com']
       );
       console.log('✅ Admin user updated successfully!');
     } else {
       // Create new user
       await client.query(
-        'INSERT INTO "User" (id, email, name, password, "emailVerified") VALUES ($1, $2, $3, $4, $5)',
+        'INSERT INTO "bloxadmin_User" (id, email, name, password, "emailVerified") VALUES ($1, $2, $3, $4, $5)',
         [
           'admin-' + Date.now(),
           'admin@bloxmedical.com',

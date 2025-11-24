@@ -14,10 +14,7 @@ export async function POST(request: NextRequest) {
     const { email } = await request.json();
 
     if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
     const client = await connectDB();
@@ -25,7 +22,7 @@ export async function POST(request: NextRequest) {
     try {
       // Check if user exists
       const userResult = await client.query(
-        'SELECT id, name, email FROM "User" WHERE email = $1',
+        'SELECT id, name, email FROM "bloxadmin_User" WHERE email = $1',
         [email]
       );
 
@@ -33,7 +30,8 @@ export async function POST(request: NextRequest) {
       // But only send email if user exists
       if (userResult.rows.length === 0) {
         return NextResponse.json({
-          message: 'If an account with that email exists, a password reset link has been sent.',
+          message:
+            'If an account with that email exists, a password reset link has been sent.',
         });
       }
 
@@ -47,13 +45,13 @@ export async function POST(request: NextRequest) {
       // Use a prefix to distinguish from email verification tokens
       const identifier = `reset:${user.email}`;
       await client.query(
-        'DELETE FROM "VerificationToken" WHERE identifier = $1',
+        'DELETE FROM "bloxadmin_VerificationToken" WHERE identifier = $1',
         [identifier]
       );
 
       // Store reset token
       await client.query(
-        'INSERT INTO "VerificationToken" (id, identifier, token, expires) VALUES ($1, $2, $3, $4)',
+        'INSERT INTO "bloxadmin_VerificationToken" (id, identifier, token, expires) VALUES ($1, $2, $3, $4)',
         [cuid(), identifier, token, expires]
       );
 
@@ -70,21 +68,27 @@ export async function POST(request: NextRequest) {
       });
 
       if (!emailResult.success) {
-        console.error('Failed to send password reset email:', emailResult.error);
+        console.error(
+          'Failed to send password reset email:',
+          emailResult.error
+        );
         // Still return success to prevent email enumeration
         return NextResponse.json({
-          message: 'If an account with that email exists, a password reset link has been sent.',
+          message:
+            'If an account with that email exists, a password reset link has been sent.',
         });
       }
 
       return NextResponse.json({
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
       });
     } catch (dbError) {
       console.error('Database error in forgot-password:', dbError);
       // Still return success to prevent email enumeration
       return NextResponse.json({
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
       });
     }
   } catch (error) {
@@ -99,4 +103,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
