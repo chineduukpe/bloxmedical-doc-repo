@@ -1,0 +1,31 @@
+/**
+ * PM2 Ecosystem Configuration
+ * 
+ * Copy this file to ecosystem.config.js and customize as needed.
+ * Place it in the deployment directory on EC2.
+ */
+
+module.exports = {
+  apps: [
+    {
+      name: 'blox-admin',
+      script: 'yarn',
+      args: 'start',
+      cwd: '/opt/blox-admin/app',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+      },
+      error_file: '/opt/blox-admin/logs/err.log',
+      out_file: '/opt/blox-admin/logs/out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      time: true,
+    },
+  ],
+};
+

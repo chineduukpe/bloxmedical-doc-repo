@@ -1,0 +1,98 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: yarn db:generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Build application
+        run: yarn build
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXT_PUBLIC_AI_SERVICE_URL: ${{ secrets.NEXT_PUBLIC_AI_SERVICE_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+          tar -czf deploy/app.tar.gz \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='.next' \
+            --exclude='.github' \
+            --exclude='*.log' \
+            --exclude='.env*' \
+            .
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          DEPLOY_PATH="${{ secrets.EC2_DEPLOY_PATH }}"
+          EC2_USER="${{ secrets.EC2_USER }}"
+          EC2_HOST="${{ secrets.EC2_HOST }}"
+          
+          # Upload deployment package
+          echo "📤 Uploading deployment package..."
+          scp -i ~/.ssh/deploy_key deploy/app.tar.gz $EC2_USER@$EC2_HOST:$DEPLOY_PATH/
+          
+          # Upload deployment script if it doesn't exist
+          echo "📤 Ensuring deployment script exists..."
+          scp -i ~/.ssh/deploy_key scripts/deploy.sh $EC2_USER@$EC2_HOST:$DEPLOY_PATH/deploy.sh || true
+          
+          # Execute deployment
+          echo "🚀 Executing deployment on EC2..."
+          ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST << EOF
+            set -e
+            chmod +x $DEPLOY_PATH/deploy.sh || true
+            $DEPLOY_PATH/deploy.sh $DEPLOY_PATH
+          EOF
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf deploy
+          rm -f ~/.ssh/deploy_key
+
