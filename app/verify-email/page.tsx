@@ -94,7 +94,7 @@ function VerifyEmailContent() {
               <p className="mt-2 text-gray-600">{message}</p>
               <div className="mt-6">
                 <Link
-                  href="/"
+                  href="/login"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#107EAA] hover:bg-[#0e6b8f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#107EAA]"
                 >
                   Go to Login
@@ -126,7 +126,7 @@ function VerifyEmailContent() {
               <p className="mt-2 text-gray-600">{message}</p>
               <div className="mt-6">
                 <Link
-                  href="/"
+                  href="/login"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#107EAA] hover:bg-[#0e6b8f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#107EAA]"
                 >
                   Go to Login

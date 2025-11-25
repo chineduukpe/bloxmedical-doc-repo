@@ -156,7 +156,7 @@ function ResetPasswordContent() {
             </Link>
             <div className="mt-4">
               <Link
-                href="/"
+                href="/login"
                 className="text-sm text-[#107EAA] hover:text-[#0d6b8a] hover:underline"
               >
                 Back to Login
@@ -209,7 +209,7 @@ function ResetPasswordContent() {
               your new password.
             </p>
             <Link
-              href="/"
+              href="/login"
               className="inline-block bg-[#107EAA] text-white py-3 px-6 rounded-lg font-medium hover:bg-[#0d6b8a] focus:outline-none focus:ring-2 focus:ring-[#107EAA] focus:ring-offset-2 transition-colors"
             >
               Go to Login
@@ -399,7 +399,7 @@ function ResetPasswordContent() {
 
         <div className="mt-6 text-center">
           <Link
-            href="/"
+            href="/login"
             className="text-sm text-[#107EAA] hover:text-[#0d6b8a] hover:underline font-medium"
           >
             Back to Login

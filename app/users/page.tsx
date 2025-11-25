@@ -8,7 +8,7 @@ export default async function UsersPage() {
   const session = await auth();
 
   if (!session || !session.user) {
-    redirect('/');
+    redirect('/login');
   }
 
   // Fetch user role from database
