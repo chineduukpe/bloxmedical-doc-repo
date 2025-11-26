@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn, getSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
 export default function LoginForm() {
@@ -12,6 +12,8 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +30,8 @@ export default function LoginForm() {
       if (result?.error) {
         setError('Incorrect email or password attempt. Try again.');
       } else {
-        router.push('/dashboard');
+        // Use callbackUrl if available, otherwise default to dashboard
+        router.push(callbackUrl);
       }
     } catch (error) {
       setError('An error occurred. Please try again.');

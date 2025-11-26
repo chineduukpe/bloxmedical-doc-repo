@@ -54,7 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: 'jwt',
   },
   pages: {
-    signIn: '/',
+    signIn: '/login',
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -68,6 +68,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Handle relative URLs
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // Handle absolute URLs on the same origin
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      // Default redirect to dashboard
+      return `${baseUrl}/dashboard`;
     },
   },
 });
