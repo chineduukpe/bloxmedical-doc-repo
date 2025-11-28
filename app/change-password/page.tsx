@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
@@ -25,6 +25,12 @@ export default function ChangePasswordPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (session === null) {
+      router.push('/login');
+    }
+  }, [session, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,16 +110,7 @@ export default function ChangePasswordPage() {
   };
 
   if (!session) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Access Denied
-          </h1>
-          <p className="text-gray-600">Please log in to access this page.</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -167,7 +164,9 @@ export default function ChangePasswordPage() {
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                    aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showCurrentPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showCurrentPassword ? (
                       <svg
@@ -232,7 +231,9 @@ export default function ChangePasswordPage() {
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showNewPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showNewPassword ? (
                       <svg
@@ -300,7 +301,9 @@ export default function ChangePasswordPage() {
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showConfirmPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showConfirmPassword ? (
                       <svg
