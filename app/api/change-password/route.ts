@@ -38,54 +38,52 @@ export async function POST(request: NextRequest) {
     // Connect to database
     const client = await connectDB();
 
-    try {
-      // Get current user data
-      const userResult = await client.query(
-        'SELECT id, password FROM "bloxadmin_User" WHERE id = $1',
-        [session.user.id]
-      );
+    // Get current user data
+    const userResult = await client.query(
+      'SELECT id, password FROM "bloxadmin_User" WHERE id = $1',
+      [session.user.id]
+    );
 
-      if (userResult.rows.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
+    if (userResult.rows.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
-      const user = userResult.rows[0];
+    const user = userResult.rows[0];
 
-      if (!user.password) {
-        return NextResponse.json(
-          { error: 'User does not have a password set' },
-          { status: 400 }
-        );
-      }
-
-      // Verify current password
-      const isCurrentPasswordValid = await bcrypt.compare(
-        currentPassword,
-        user.password
-      );
-
-      if (!isCurrentPasswordValid) {
-        return NextResponse.json(
-          { error: 'Current password is incorrect' },
-          { status: 400 }
-        );
-      }
-
-      // Hash new password
-      const saltRounds = 12;
-      const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
-
-      // Update password in database
-      await client.query(
-        'UPDATE "bloxadmin_User" SET password = $1, "updatedAt" = NOW() WHERE id = $2',
-        [hashedNewPassword, session.user.id]
-      );
-
+    if (!user.password) {
       return NextResponse.json(
-        { message: 'Password changed successfully' },
-        { status: 200 }
+        { error: 'User does not have a password set' },
+        { status: 400 }
       );
     }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
+    if (!isCurrentPasswordValid) {
+      return NextResponse.json(
+        { error: 'Current password is incorrect' },
+        { status: 400 }
+      );
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password in database
+    await client.query(
+      'UPDATE "bloxadmin_User" SET password = $1, "updatedAt" = NOW() WHERE id = $2',
+      [hashedNewPassword, session.user.id]
+    );
+
+    return NextResponse.json(
+      { message: 'Password changed successfully' },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error changing password:', error);
     return NextResponse.json(
