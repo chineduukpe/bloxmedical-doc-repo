@@ -85,9 +85,6 @@ export async function POST(request: NextRequest) {
         { message: 'Password changed successfully' },
         { status: 200 }
       );
-    } finally {
-      // Always close the database connection
-      await client.end();
     }
   } catch (error) {
     console.error('Error changing password:', error);
