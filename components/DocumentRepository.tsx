@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DocumentModal from './DocumentModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import DocumentViewModal from './DocumentViewModal';
@@ -16,6 +17,18 @@ interface Document {
   uploadDate: string;
   lastEdited: string;
   embeddingStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  sizeBytes?: number;
+  isIndexed?: boolean;
+  lastIndexedAt?: string;
+}
+
+interface PaginationInfo {
+  current_page: number;
+  per_page: number;
+  total_documents: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
 }
 
 interface DocumentRepositoryProps {
@@ -25,82 +38,98 @@ interface DocumentRepositoryProps {
 export default function DocumentRepository({
   userRole = 'COLLABORATOR',
 }: DocumentRepositoryProps) {
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(
     null
   );
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
   const [pdfDocument, setPdfDocument] = useState<Document | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(
+    new Set()
+  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const queryClient = useQueryClient();
 
-  // Fetch documents from database
-  const fetchDocuments = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/documents');
-
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data.documents || []);
-      } else {
-        toast.error('Failed to fetch documents');
+  // Fetch documents using TanStack Query
+  const {
+    data: documentsData,
+    isLoading,
+    error: documentsError,
+  } = useQuery({
+    queryKey: ['documents', currentPage, itemsPerPage],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+      const response = await fetch(`/api/documents?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
       }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      toast.error('Failed to fetch documents');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return response.json();
+    },
+  });
 
-  // Fetch users
-  const fetchUsers = async () => {
-    try {
+  const documents = documentsData?.documents || [];
+  const pagination = documentsData?.pagination || null;
+
+  // Fetch users using TanStack Query
+  const { data: usersData } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
       const response = await fetch('/api/users');
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
       }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
+      return response.json();
+    },
+  });
 
+  const users = usersData || [];
+
+  // Reset to first page when search term changes
   useEffect(() => {
-    fetchDocuments();
-    fetchUsers();
-  }, []);
+    if (searchTerm) {
+      setCurrentPage(1);
+    }
+  }, [searchTerm]);
+
+  // Show error toast if documents fetch fails
+  useEffect(() => {
+    if (documentsError) {
+      toast.error('Failed to fetch documents');
+    }
+  }, [documentsError]);
 
   // Filter documents based on search term
   const filteredDocuments = documents.filter(
-    (doc) =>
+    (doc: Document) =>
       doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Calculate summary statistics
-  const totalDocuments = filteredDocuments.length;
-  const cardiologyCount = filteredDocuments.filter(
-    (doc) => doc.category === 'Cardiology'
+  // Calculate summary statistics (use pagination total if available, otherwise use filtered count)
+  const totalDocuments = pagination?.total_documents || filteredDocuments.length;
+  const cardiologyCount = documents.filter(
+    (doc: Document) => doc.category === 'Cardiology'
   ).length;
-  const gastrointestinalCount = filteredDocuments.filter(
-    (doc) => doc.category === 'Gastrointestinal'
+  const gastrointestinalCount = documents.filter(
+    (doc: Document) => doc.category === 'Gastrointestinal'
   ).length;
-  const urgentCareCount = filteredDocuments.filter(
-    (doc) => doc.category === 'Urgent Care'
+  const urgentCareCount = documents.filter(
+    (doc: Document) => doc.category === 'Urgent Care'
   ).length;
 
-  const handleAddDocument = async (documentData: any) => {
-    try {
+  // Add document mutation
+  const addDocumentMutation = useMutation({
+    mutationFn: async (documentData: any) => {
       const formData = new FormData();
       formData.append('name', documentData.name);
       formData.append('description', documentData.description);
@@ -114,18 +143,25 @@ export default function DocumentRepository({
         body: formData,
       });
 
-      if (response.ok) {
-        await fetchDocuments();
-        setIsModalOpen(false);
-        toast.success('Document uploaded successfully!');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to create document');
+        throw new Error(errorData.error || 'Failed to create document');
       }
-    } catch (error) {
-      console.error('Error creating document:', error);
-      toast.error('Failed to upload document');
-    }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setIsModalOpen(false);
+      toast.success('Document uploaded successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to upload document');
+    },
+  });
+
+  const handleAddDocument = async (documentData: any) => {
+    addDocumentMutation.mutate(documentData);
   };
 
   const handleBulkUploadClick = () => {
@@ -152,7 +188,7 @@ export default function DocumentRepository({
 
       if (response.ok) {
         const data = await response.json();
-        await fetchDocuments();
+        queryClient.invalidateQueries({ queryKey: ['documents'] });
         toast.success(`Successfully uploaded ${data.count} document(s)!`);
         // Reset file input
         if (fileInputRef.current) {
@@ -170,10 +206,9 @@ export default function DocumentRepository({
     }
   };
 
-  const handleEditDocument = async (documentData: any) => {
-    if (!editingDocument) return;
-
-    try {
+  // Edit document mutation
+  const editDocumentMutation = useMutation({
+    mutationFn: async ({ documentId, documentData }: { documentId: string; documentData: any }) => {
       const formData = new FormData();
       formData.append('name', documentData.name);
       formData.append('description', documentData.description);
@@ -182,24 +217,32 @@ export default function DocumentRepository({
         formData.append('file', documentData.file);
       }
 
-      const response = await fetch(`/api/documents/${editingDocument.id}`, {
+      const response = await fetch(`/api/documents/${documentId}`, {
         method: 'PUT',
         body: formData,
       });
 
-      if (response.ok) {
-        await fetchDocuments();
-        setEditingDocument(null);
-        setIsModalOpen(false);
-        toast.success('Document updated successfully!');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to update document');
+        throw new Error(errorData.error || 'Failed to update document');
       }
-    } catch (error) {
-      console.error('Error updating document:', error);
-      toast.error('Failed to update document');
-    }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setEditingDocument(null);
+      setIsModalOpen(false);
+      toast.success('Document updated successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update document');
+    },
+  });
+
+  const handleEditDocument = async (documentData: any) => {
+    if (!editingDocument) return;
+    editDocumentMutation.mutate({ documentId: editingDocument.id, documentData });
   };
 
   const handleDeleteClick = (document: Document) => {
@@ -207,36 +250,129 @@ export default function DocumentRepository({
     setIsDeleteModalOpen(true);
   };
 
+  // Delete document mutation
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async ({ documentId, documentName }: { documentId: string; documentName: string }) => {
+      const response = await fetch(
+        `/api/documents/${documentId}?name=${encodeURIComponent(documentName)}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete document');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setIsDeleteModalOpen(false);
+      setDocumentToDelete(null);
+      toast.success('Document deleted successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete document');
+    },
+  });
+
+  const isDeleting = deleteDocumentMutation.isPending;
+
   const handleDeleteConfirm = async () => {
+    // Handle bulk delete
+    if (selectedDocuments.size > 0 && !documentToDelete) {
+      await handleBulkDeleteConfirm();
+      return;
+    }
+
+    // Handle single delete
     if (!documentToDelete) return;
 
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/documents/${documentToDelete.id}`, {
-        method: 'DELETE',
-      });
+    // Remove from selection if it was selected
+    setSelectedDocuments((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(documentToDelete.id);
+      return newSet;
+    });
 
-      if (response.ok) {
-        await fetchDocuments();
-        setIsDeleteModalOpen(false);
-        setDocumentToDelete(null);
-        toast.success('Document deleted successfully!');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to delete document');
-      }
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      toast.error('Failed to delete document');
-    } finally {
-      setIsDeleting(false);
-    }
+    deleteDocumentMutation.mutate({
+      documentId: documentToDelete.id,
+      documentName: documentToDelete.name,
+    });
   };
 
   const handleDeleteCancel = () => {
     setIsDeleteModalOpen(false);
     setDocumentToDelete(null);
   };
+
+  const handleSelectDocument = (documentId: string) => {
+    setSelectedDocuments((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(documentId)) {
+        newSet.delete(documentId);
+      } else {
+        newSet.add(documentId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDocuments.size === filteredDocuments.length) {
+      setSelectedDocuments(new Set());
+    } else {
+      setSelectedDocuments(new Set(filteredDocuments.map((doc: Document) => doc.id)));
+    }
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedDocuments.size === 0) return;
+    setIsDeleteModalOpen(true);
+    setDocumentToDelete(null);
+  };
+
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (documentNames: string[]) => {
+      const response = await fetch('/api/documents/bulk', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ names: documentNames }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete documents');
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setSelectedDocuments(new Set());
+      setIsDeleteModalOpen(false);
+      toast.success(`Successfully deleted ${ids.length} document(s)!`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete documents');
+    },
+  });
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedDocuments.size === 0) return;
+    // Get document names for selected documents
+    const selectedDocumentNames = documents
+      .filter((doc: Document) => selectedDocuments.has(doc.id))
+      .map((doc: Document) => doc.name);
+    bulkDeleteMutation.mutate(selectedDocumentNames);
+  };
+
+  const isBulkDeleting = bulkDeleteMutation.isPending;
 
   const handleViewDocument = (document: Document) => {
     setPdfDocument(document);
@@ -509,12 +645,61 @@ export default function DocumentRepository({
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedDocuments.size > 0 && (
+        <div className="bg-[#107EAA] text-white px-6 py-3 rounded-lg mb-4 flex items-center justify-between">
+          <span className="font-medium">
+            {selectedDocuments.size} document(s) selected
+          </span>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSelectedDocuments(new Set())}
+              className="px-4 py-1.5 text-sm bg-white/20 hover:bg-white/30 rounded-md transition-colors"
+            >
+              Clear Selection
+            </button>
+            {userRole === 'ADMIN' && (
+              <button
+                onClick={handleBulkDeleteClick}
+                className="px-4 py-1.5 text-sm bg-red-600 hover:bg-red-700 rounded-md transition-colors flex items-center space-x-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                <span>Delete Selected</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Document Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredDocuments.length > 0 &&
+                      selectedDocuments.size === filteredDocuments.length
+                    }
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-[#107EAA] focus:ring-[#107EAA] cursor-pointer"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
@@ -545,7 +730,7 @@ export default function DocumentRepository({
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     Loading documents...
@@ -554,15 +739,30 @@ export default function DocumentRepository({
               ) : filteredDocuments.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     No documents found
                   </td>
                 </tr>
               ) : (
-                filteredDocuments.map((document) => (
-                  <tr key={document.id}>
+                filteredDocuments.map((document: Document) => (
+                  <tr
+                    key={document.id}
+                    className={
+                      selectedDocuments.has(document.id)
+                        ? 'bg-blue-50'
+                        : ''
+                    }
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocuments.has(document.id)}
+                        onChange={() => handleSelectDocument(document.id)}
+                        className="rounded border-gray-300 text-[#107EAA] focus:ring-[#107EAA] cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {document.name}
                     </td>
@@ -681,6 +881,52 @@ export default function DocumentRepository({
         </div>
       </div>
 
+      {/* Pagination Controls */}
+      {pagination && pagination.total_pages > 1 && (
+        <div className="mt-6 flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-sm">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-700">
+              Showing {((pagination.current_page - 1) * pagination.per_page) + 1} to{' '}
+              {Math.min(pagination.current_page * pagination.per_page, pagination.total_documents)} of{' '}
+              {pagination.total_documents} documents
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={!pagination.has_previous}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={!pagination.has_previous}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="px-4 py-2 text-sm text-gray-700">
+              Page {pagination.current_page} of {pagination.total_pages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={!pagination.has_next}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(pagination.total_pages)}
+              disabled={!pagination.has_next}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Document Modal */}
       <DocumentModal
         isOpen={isModalOpen}
@@ -698,8 +944,12 @@ export default function DocumentRepository({
         isOpen={isDeleteModalOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        documentName={documentToDelete?.name || ''}
-        isDeleting={isDeleting}
+        documentName={
+          selectedDocuments.size > 0 && !documentToDelete
+            ? `${selectedDocuments.size} document(s)`
+            : documentToDelete?.name || ''
+        }
+        isDeleting={isDeleting || bulkDeleteMutation.isPending}
       />
 
       {/* Document View Modal */}

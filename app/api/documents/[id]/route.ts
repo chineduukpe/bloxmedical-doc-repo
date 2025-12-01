@@ -6,7 +6,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
-// import { deleteDocument } from '@/lib/ai-service';
+import { deleteDocument } from '@/lib/ai-service';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -137,80 +137,57 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const document = await prisma.document.findUnique({
-      where: { id },
-    });
+    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
+    
+    if (!aiServiceUrl) {
+      // Fallback to database if AI service is not configured
+      const document = await prisma.document.findUnique({
+        where: { id },
+      });
 
-    if (!document) {
-      return NextResponse.json(
-        { error: 'Document not found' },
-        { status: 404 }
-      );
-    }
-
-    // TODO: Reintroduce AI service deletion later
-    // Extract filename for AI service deletion
-    // The AI service uses the original filename that was sent during upload (file.name)
-    // Since we don't store the original filename separately, we'll try to extract it from fileUrl
-    // The fileUrl contains the S3 filename, but we need the original filename
-    // For now, we'll use the document name, but this may need adjustment based on AI service requirements
-    // let fileName = document.name;
-    //
-    // Try to extract original filename from fileUrl if possible
-    // The S3 filename format is: timestamp-random.ext, but original was file.name
-    // If the AI service stores by original filename, we may need to store it separately in the future
-    // For now, using document.name as the identifier
-    //
-    // Call AI service to delete the document first
-    // try {
-    //   const aiServiceResponse = await deleteDocument(fileName);
-    //
-    //   // Only proceed with deletion if AI service returns 200
-    //   if (aiServiceResponse.status !== 200) {
-    //     return NextResponse.json(
-    //       { error: 'Failed to delete document from AI service' },
-    //       { status: aiServiceResponse.status || 500 }
-    //     );
-    //   }
-    // } catch (aiServiceError: any) {
-    //   // If AI service deletion fails, return error and don't delete from database
-    //   console.error('Error deleting document from AI service:', aiServiceError);
-    //   const statusCode = aiServiceError?.response?.status || 500;
-    //   const errorMessage = aiServiceError?.response?.data?.error || 'Failed to delete document from AI service';
-    //   return NextResponse.json(
-    //     { error: errorMessage },
-    //     { status: statusCode }
-    //   );
-    // }
-
-    // Delete file from S3 (non-blocking - continue even if S3 deletion fails)
-    if (document.fileUrl) {
-      try {
-        const urlParts = document.fileUrl.split('/');
-        const s3FileName = urlParts[urlParts.length - 1];
-        if (s3FileName) {
-          await s3Client.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.AWS_S3_BUCKET!,
-              Key: `documents/${s3FileName}`,
-            })
-          );
-        }
-      } catch (s3Error) {
-        // Log S3 deletion error but continue with database deletion
-        console.error(
-          'Error deleting file from S3 (continuing with database deletion):',
-          s3Error
+      if (!document) {
+        return NextResponse.json(
+          { error: 'Document not found' },
+          { status: 404 }
         );
       }
+
+      // Delete from database only
+      await prisma.document.delete({
+        where: { id },
+      });
+
+      return NextResponse.json({ success: true });
     }
 
-    // Delete from database (previously: only after successful AI service deletion)
-    await prisma.document.delete({
-      where: { id },
-    });
+    // Get the filename from query parameter or use id as filename
+    // The id parameter might be a UUID, so we check for a 'name' query parameter
+    const searchParams = request.nextUrl.searchParams;
+    const fileName = searchParams.get('name') || id;
 
-    return NextResponse.json({ success: true });
+    try {
+      // Call AI service to delete the document using filename
+      // The AI service endpoint is /documents/{filename}
+      const aiServiceResponse = await deleteDocument(fileName);
+
+      // Only proceed if AI service returns success (200 or 204)
+      if (aiServiceResponse.status !== 200 && aiServiceResponse.status !== 204) {
+        return NextResponse.json(
+          { error: 'Failed to delete document from AI service' },
+          { status: aiServiceResponse.status || 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true });
+    } catch (aiServiceError: any) {
+      // If AI service deletion fails, return error
+      console.error('Error deleting document from AI service:', aiServiceError);
+      const statusCode = aiServiceError?.response?.status || 500;
+      const errorMessage =
+        aiServiceError?.response?.data?.error ||
+        'Failed to delete document from AI service';
+      return NextResponse.json({ error: errorMessage }, { status: statusCode });
+    }
   } catch (error) {
     console.error('Error deleting document:', error);
     return NextResponse.json(

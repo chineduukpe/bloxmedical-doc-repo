@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Outfit } from 'next/font/google';
 import './globals.css';
 import AuthSessionProvider from '@/components/SessionProvider';
+import QueryProvider from '@/components/QueryProvider';
 import { Toaster } from 'sonner';
 
 const outfit = Outfit({
@@ -22,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} font-sans antialiased`}>
-        <AuthSessionProvider>{children}</AuthSessionProvider>
+        <QueryProvider>
+          <AuthSessionProvider>{children}</AuthSessionProvider>
+        </QueryProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

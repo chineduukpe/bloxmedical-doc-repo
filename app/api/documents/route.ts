@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
-import { embedDocuments } from '@/lib/ai-service';
+import { embedDocuments, aiService } from '@/lib/ai-service';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -136,23 +136,110 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const documents = await prisma.document.findMany({
-      orderBy: { uploadDate: 'desc' },
+    // Get pagination parameters from query string
+    const searchParams = request.nextUrl.searchParams;
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const fileType = searchParams.get('file_type') || null;
+    const isIndexed = searchParams.get('is_indexed') || null;
+
+    // Check if AI service URL is configured
+    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
+    if (!aiServiceUrl) {
+      // Fallback to database if AI service is not configured
+      const documents = await prisma.document.findMany({
+        orderBy: { uploadDate: 'desc' },
+      });
+      return NextResponse.json({ documents });
+    }
+
+    // Build query parameters for AI service
+    const params: Record<string, string> = {
+      page: page.toString(),
+      limit: limit.toString(),
+    };
+    if (fileType) {
+      params.file_type = fileType;
+    }
+    if (isIndexed !== null) {
+      params.is_indexed = isIndexed;
+    }
+
+    // Fetch documents from external AI service
+    const response = await aiService.get('/documents', { params });
+
+    if (!response.data) {
+      return NextResponse.json(
+        { error: 'Invalid response from AI service' },
+        { status: 500 }
+      );
+    }
+
+    // Map external API documents to internal format
+    const mappedDocuments = response.data.documents.map((doc: any) => {
+      // Extract category from filename if possible (e.g., "Cardiology- Document.docx")
+      const categoryMatch = doc.original_name?.match(/^([^-]+)-/) || 
+                           doc.name?.match(/^([^-]+)-/);
+      const category = categoryMatch ? categoryMatch[1].trim() : 'General';
+
+      // Map file_type to MIME type
+      const fileTypeMap: Record<string, string> = {
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        doc: 'application/msword',
+        pdf: 'application/pdf',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        xls: 'application/vnd.ms-excel',
+      };
+      const mimeType = fileTypeMap[doc.file_type?.toLowerCase()] || `application/${doc.file_type || 'octet-stream'}`;
+
+      // Generate file URL from AI service
+      const fileUrl = aiServiceUrl
+        ? `${aiServiceUrl}/documents/${encodeURIComponent(doc.name)}`
+        : '';
+
+      return {
+        id: doc.id,
+        name: doc.original_name || doc.name,
+        description: `Document file: ${doc.original_name || doc.name}`,
+        category: category,
+        fileUrl: fileUrl,
+        fileType: mimeType,
+        uploadDate: doc.uploaded_at,
+        lastEdited: doc.last_indexed_at || doc.uploaded_at,
+        embeddingStatus: doc.is_indexed ? 'COMPLETED' : 'PENDING',
+        sizeBytes: doc.size_bytes,
+        isIndexed: doc.is_indexed,
+        lastIndexedAt: doc.last_indexed_at,
+      };
     });
 
-    return NextResponse.json({ documents });
+    return NextResponse.json({
+      documents: mappedDocuments,
+      pagination: response.data.pagination,
+      filters: response.data.filters,
+    });
   } catch (error) {
     console.error('Error fetching documents:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    
+    // If AI service fails, try to fallback to database
+    try {
+      const documents = await prisma.document.findMany({
+        orderBy: { uploadDate: 'desc' },
+      });
+      return NextResponse.json({ documents });
+    } catch (dbError) {
+      console.error('Error fetching from database:', dbError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
   }
 }

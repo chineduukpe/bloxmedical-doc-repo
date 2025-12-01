@@ -35,12 +35,15 @@ export default function DeleteConfirmationModal({
 
         {/* Title */}
         <h2 className="text-xl font-bold text-gray-800 text-center mb-4">
-          Delete Document Permanently
+          {documentName.includes('document(s)')
+            ? 'Delete Documents Permanently'
+            : 'Delete Document Permanently'}
         </h2>
 
         {/* Confirmation Message */}
         <p className="text-gray-600 text-center mb-6">
-          Are you sure you want to delete <strong>{documentName}</strong>?
+          Are you sure you want to delete{' '}
+          <strong>{documentName}</strong>? This action cannot be undone.
         </p>
 
         {/* Action Buttons */}
@@ -56,7 +59,11 @@ export default function DeleteConfirmationModal({
             disabled={isDeleting}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
-            {isDeleting ? 'Deleting...' : 'Delete Document'}
+            {isDeleting
+              ? 'Deleting...'
+              : documentName.includes('document(s)')
+                ? 'Delete Documents'
+                : 'Delete Document'}
           </button>
         </div>
       </div>

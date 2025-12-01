@@ -95,6 +95,16 @@ export default function Header({ user }: HeaderProps) {
                 >
                   Audit Logs
                 </Link>
+                <Link
+                  href="/missing-conditions"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === '/missing-conditions'
+                      ? 'bg-[#107EAA] text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
+                  }`}
+                >
+                  Missing Conditions
+                </Link>
               </>
             </nav>
           </div>

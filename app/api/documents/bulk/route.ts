@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
-import { embedBulkDocuments } from '@/lib/ai-service';
+import { embedBulkDocuments, deleteDocument } from '@/lib/ai-service';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -188,6 +192,92 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error bulk uploading documents:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { names } = body; // Changed from ids to names
+
+    if (!names || !Array.isArray(names) || names.length === 0) {
+      return NextResponse.json(
+        { error: 'No document names provided' },
+        { status: 400 }
+      );
+    }
+
+    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
+
+    if (!aiServiceUrl) {
+      // Fallback to database if AI service is not configured
+      const documents = await prisma.document.findMany({
+        where: {
+          name: {
+            in: names,
+          },
+        },
+      });
+
+      if (documents.length === 0) {
+        return NextResponse.json(
+          { error: 'No documents found' },
+          { status: 404 }
+        );
+      }
+
+      // Delete from database only
+      const deleteResult = await prisma.document.deleteMany({
+        where: {
+          name: {
+            in: names,
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        deletedCount: deleteResult.count,
+      });
+    }
+
+    // Delete from AI service
+    const deletePromises = names.map(async (fileName: string) => {
+      try {
+        const response = await deleteDocument(fileName);
+        return { fileName, success: response.status === 200 || response.status === 204 };
+      } catch (error) {
+        console.error(`Error deleting document ${fileName} from AI service:`, error);
+        return { fileName, success: false };
+      }
+    });
+
+    const results = await Promise.all(deletePromises);
+    const successfulDeletes = results.filter((r) => r.success);
+
+    if (successfulDeletes.length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to delete any documents from AI service' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: successfulDeletes.length,
+      failedCount: results.length - successfulDeletes.length,
+    });
+  } catch (error) {
+    console.error('Error bulk deleting documents:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
