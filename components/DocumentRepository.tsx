@@ -390,6 +390,14 @@ export default function DocumentRepository({
     });
   };
 
+  const formatDateShort = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
   const truncateDescription = (description: string, maxWords: number = 15) => {
     const words = description.split(' ');
     if (words.length <= maxWords) {
@@ -685,11 +693,32 @@ export default function DocumentRepository({
 
       {/* Document Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .table-scroll-container {
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+          }
+          .table-scroll-container::-webkit-scrollbar {
+            height: 8px;
+          }
+          .table-scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .table-scroll-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+          }
+          .table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+          }
+        `}} />
+        <div className="table-scroll-container">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[50px]">
                   <input
                     type="checkbox"
                     checked={
@@ -700,28 +729,28 @@ export default function DocumentRepository({
                     className="rounded border-gray-300 text-[#107EAA] focus:ring-[#107EAA] cursor-pointer"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] hidden lg:table-cell">
                   File Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px] hidden md:table-cell">
                   Upload Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px] hidden md:table-cell">
                   Last Edited
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
                   Embedding Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                   Actions
                 </th>
               </tr>
@@ -755,7 +784,7 @@ export default function DocumentRepository({
                         : ''
                     }
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedDocuments.has(document.id)}
@@ -763,12 +792,14 @@ export default function DocumentRepository({
                         className="rounded border-gray-300 text-[#107EAA] focus:ring-[#107EAA] cursor-pointer"
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {document.name}
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <div className="max-w-[150px] truncate" title={document.name}>
+                        {document.name}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                    <td className="px-4 py-3 text-sm text-gray-500">
                       <div
-                        className="break-words"
+                        className="break-words max-w-[200px]"
                         style={{
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
@@ -779,27 +810,33 @@ export default function DocumentRepository({
                         }}
                         title={document.description}
                       >
-                        {truncateDescription(document.description)}
+                        {truncateDescription(document.description, 12)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {document.category}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                      <div className="max-w-[120px] truncate" title={document.category}>
+                        {document.category}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#107EAA]/10 text-[#107EAA]">
                         {formatFileType(document.fileType)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(document.uploadDate)}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                      <div className="max-w-[130px]" title={formatDate(document.uploadDate)}>
+                        {formatDateShort(document.uploadDate)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(document.lastEdited)}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                      <div className="max-w-[130px]" title={formatDate(document.lastEdited)}>
+                        {formatDateShort(document.lastEdited)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {getEmbeddingStatusBadge(document.embeddingStatus)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleViewDocument(document)}

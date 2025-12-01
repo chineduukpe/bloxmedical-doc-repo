@@ -89,6 +89,15 @@ export default function MissingConditionsRepository() {
     });
   };
 
+  const formatDateShort = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
   const getStatusBadgeColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'resolved':
@@ -100,6 +109,44 @@ export default function MissingConditionsRepository() {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Strip HTML tags and return plain text
+  const stripHtml = (html: string | null): string => {
+    if (!html) return '';
+    
+    // Use DOM parser if available (client-side), otherwise use regex fallback
+    if (typeof document !== 'undefined') {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const text = tmp.textContent || tmp.innerText || '';
+      return text.trim().replace(/\s+/g, ' ');
+    }
+    
+    // Fallback: regex-based HTML tag removal
+    return html
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&') // Replace &amp; with &
+      .replace(/&lt;/g, '<') // Replace &lt; with <
+      .replace(/&gt;/g, '>') // Replace &gt; with >
+      .replace(/&quot;/g, '"') // Replace &quot; with "
+      .replace(/&#39;/g, "'") // Replace &#39; with '
+      .trim()
+      .replace(/\s+/g, ' '); // Normalize whitespace
+  };
+
+  // Truncate text to a maximum number of characters
+  const truncateText = (text: string, maxLength: number = 100): string => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  // Combine strip HTML and truncate
+  const formatText = (html: string | null, maxLength: number = 100): string => {
+    const plainText = stripHtml(html);
+    return truncateText(plainText, maxLength);
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -146,32 +193,53 @@ export default function MissingConditionsRepository() {
 
       {/* Conditions Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .table-scroll-container {
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+          }
+          .table-scroll-container::-webkit-scrollbar {
+            height: 8px;
+          }
+          .table-scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          .table-scroll-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+          }
+          .table-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+          }
+        `}} />
+        <div className="table-scroll-container">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                   Condition Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                   Original Query
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] hidden lg:table-cell">
                   User ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                   Admin Notes
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px] hidden md:table-cell">
                   Created At
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px] hidden md:table-cell">
                   Reviewed At
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
                   Actions
                 </th>
               </tr>
@@ -198,20 +266,25 @@ export default function MissingConditionsRepository() {
               ) : (
                 conditions.map((condition) => (
                   <tr key={condition.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       <div className="text-sm font-medium text-gray-900">
                         {condition.condition_name}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500 max-w-md truncate" title={condition.original_query}>
-                        {condition.original_query}
+                    <td className="px-4 py-3">
+                      <div 
+                        className="text-sm text-gray-500 max-w-[200px]" 
+                        title={stripHtml(condition.original_query)}
+                      >
+                        {formatText(condition.original_query, 50)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {condition.user_id}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
+                      <div className="max-w-[120px] truncate" title={condition.user_id}>
+                        {condition.user_id}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(
                           condition.status
@@ -220,18 +293,25 @@ export default function MissingConditionsRepository() {
                         {condition.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-500 max-w-md truncate" title={condition.admin_notes || ''}>
-                        {condition.admin_notes || 'N/A'}
+                    <td className="px-4 py-3">
+                      <div 
+                        className="text-sm text-gray-500 max-w-[150px]" 
+                        title={stripHtml(condition.admin_notes)}
+                      >
+                        {condition.admin_notes ? formatText(condition.admin_notes, 40) : 'N/A'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(condition.created_at)}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                      <div className="max-w-[130px]" title={formatDate(condition.created_at)}>
+                        {formatDateShort(condition.created_at)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(condition.reviewed_at)}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                      <div className="max-w-[130px]" title={formatDate(condition.reviewed_at)}>
+                        {formatDateShort(condition.reviewed_at)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => {
