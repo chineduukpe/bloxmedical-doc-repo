@@ -54,6 +54,11 @@ export default function DocumentViewModal({
         // Default to direct URL
         setViewerUrl(fileUrl);
       }
+    } else {
+      // Reset viewerUrl when modal closes or fileUrl is empty
+      setViewerUrl('');
+      setIsLoading(false);
+      setError(null);
     }
   }, [isOpen, fileUrl, fileType, documentName]);
 
@@ -105,7 +110,7 @@ export default function DocumentViewModal({
     documentName.toLowerCase().endsWith('.xls');
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] mx-4 flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
@@ -215,7 +220,7 @@ export default function DocumentViewModal({
                 </div>
               </div>
             </div>
-          ) : (
+          ) : viewerUrl ? (
             <iframe
               src={viewerUrl}
               className="w-full h-full border-0"
@@ -224,6 +229,12 @@ export default function DocumentViewModal({
               title={`Document Preview: ${documentName}`}
               allow="fullscreen"
             />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+              <div className="text-center">
+                <p className="text-gray-600">No document URL available</p>
+              </div>
+            </div>
           )}
         </div>
 

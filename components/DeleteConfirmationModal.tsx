@@ -19,7 +19,7 @@ export default function DeleteConfirmationModal({
 
   return (
     <div
-      className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div

@@ -37,7 +37,7 @@ export default function PDFViewModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-6xl h-[90vh] mx-4 flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-200">
