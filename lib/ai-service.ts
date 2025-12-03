@@ -107,7 +107,7 @@ export async function reEmbedDocuments(): Promise<any> {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 180000,
+      timeout: 300000,
     }
   );
 
