@@ -41,7 +41,7 @@ export async function embedDocuments(
   }
 
   const formData = new FormData();
-  
+
   // Add the file to the form data
   formData.append('files', fileBuffer, {
     filename: fileName,
@@ -71,7 +71,7 @@ export async function embedBulkDocuments(
   }
 
   const formData = new FormData();
-  
+
   // Add all files to the form data
   files.forEach((file) => {
     formData.append('files', file.fileBuffer, {
@@ -100,12 +100,16 @@ export async function reEmbedDocuments(): Promise<any> {
     throw new Error('AI Service URL is not configured');
   }
 
-  const response = await axios.post(`${baseURL}/embed`, {}, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    timeout: 60000,
-  });
+  const response = await axios.post(
+    `${baseURL}/embed`,
+    {},
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 180000,
+    }
+  );
 
   return response;
 }
@@ -120,9 +124,12 @@ export async function deleteDocument(fileName: string): Promise<any> {
     throw new Error('AI Service URL is not configured');
   }
 
-  const response = await aiService.delete(`/documents/${encodeURIComponent(fileName)}`, {
-    timeout: 30000,
-  });
+  const response = await aiService.delete(
+    `/documents/${encodeURIComponent(fileName)}`,
+    {
+      timeout: 30000,
+    }
+  );
 
   return response;
 }
