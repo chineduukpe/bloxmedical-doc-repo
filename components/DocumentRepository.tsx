@@ -280,6 +280,33 @@ export default function DocumentRepository({
 
   const isDeleting = deleteDocumentMutation.isPending;
 
+  // Re-embed mutation
+  const reEmbedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/documents/re-embed', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to re-embed documents');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      toast.success('Re-embedding completed successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to re-embed documents');
+    },
+  });
+
+  const handleReEmbed = () => {
+    reEmbedMutation.mutate();
+  };
+
   const handleDeleteConfirm = async () => {
     // Handle bulk delete
     if (selectedDocuments.size > 0 && !documentToDelete) {
@@ -621,6 +648,26 @@ export default function DocumentRepository({
               />
             </svg>
             <span>Add New Document</span>
+          </button>
+          <button
+            onClick={handleReEmbed}
+            disabled={reEmbedMutation.isPending}
+            className="bg-[#107EAA] text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-[#0e6b8f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            <span>{reEmbedMutation.isPending ? 'Re-embedding...' : 'Re-embed'}</span>
           </button>
         </div>
       </div>

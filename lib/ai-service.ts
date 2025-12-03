@@ -91,6 +91,26 @@ export async function embedBulkDocuments(
 }
 
 /**
+ * Re-embed documents without uploading files
+ * Calls the /embed endpoint without any file data
+ * @returns Promise with the response from the embed endpoint
+ */
+export async function reEmbedDocuments(): Promise<any> {
+  if (!baseURL) {
+    throw new Error('AI Service URL is not configured');
+  }
+
+  const response = await axios.post(`${baseURL}/embed`, {}, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    timeout: 60000,
+  });
+
+  return response;
+}
+
+/**
  * Delete a document from the AI service
  * @param fileName The filename of the document to delete
  * @returns Promise with the response from the delete endpoint
