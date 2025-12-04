@@ -6,7 +6,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
-import { deleteDocument } from '@/lib/ai-service';
+import { deleteDocument, reEmbedDocuments } from '@/lib/ai-service';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -137,56 +137,68 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
-    
-    if (!aiServiceUrl) {
-      // Fallback to database if AI service is not configured
-      const document = await prisma.document.findUnique({
-        where: { id },
-      });
+    try {
+      // Call AI service to delete the document using ID
+      // The AI service endpoint is /documents/{id}
+      const aiServiceResponse = await deleteDocument(id);
 
-      if (!document) {
+      // Check if AI service returned success (200 or 204)
+      if (
+        aiServiceResponse.status === 200 ||
+        aiServiceResponse.status === 204
+      ) {
+        // Trigger re-embedding asynchronously after successful deletion
+        // setImmediate(async () => {
+        //   try {
+        //     await reEmbedDocuments();
+        //     console.log(
+        //       'Re-embedding completed successfully after document deletion'
+        //     );
+        //   } catch (error) {
+        //     console.error(
+        //       'Error re-embedding documents after deletion:',
+        //       error
+        //     );
+        //     // Don't throw - this is fire-and-forget
+        //   }
+        // });
+
+        return NextResponse.json({ success: true });
+      } else if (aiServiceResponse.status === 404) {
+        // Document not found in AI service
         return NextResponse.json(
-          { error: 'Document not found' },
+          { error: 'Document not found in AI service' },
+          { status: 404 }
+        );
+      } else {
+        // Other error from AI service
+        return NextResponse.json(
+          {
+            error: `AI service returned status ${aiServiceResponse.status}`,
+          },
+          { status: aiServiceResponse.status || 500 }
+        );
+      }
+    } catch (aiServiceError: any) {
+      // Handle errors gracefully
+      const statusCode = aiServiceError?.response?.status;
+      const errorMessage =
+        aiServiceError?.response?.data?.error ||
+        aiServiceError?.message ||
+        'Failed to delete document from AI service';
+
+      if (statusCode === 404) {
+        return NextResponse.json(
+          { error: 'Document not found in AI service' },
           { status: 404 }
         );
       }
 
-      // Delete from database only
-      await prisma.document.delete({
-        where: { id },
-      });
-
-      return NextResponse.json({ success: true });
-    }
-
-    // Get the filename from query parameter or use id as filename
-    // The id parameter might be a UUID, so we check for a 'name' query parameter
-    const searchParams = request.nextUrl.searchParams;
-    const fileName = searchParams.get('name') || id;
-
-    try {
-      // Call AI service to delete the document using filename
-      // The AI service endpoint is /documents/{filename}
-      const aiServiceResponse = await deleteDocument(fileName);
-
-      // Only proceed if AI service returns success (200 or 204)
-      if (aiServiceResponse.status !== 200 && aiServiceResponse.status !== 204) {
-        return NextResponse.json(
-          { error: 'Failed to delete document from AI service' },
-          { status: aiServiceResponse.status || 500 }
-        );
-      }
-
-      return NextResponse.json({ success: true });
-    } catch (aiServiceError: any) {
-      // If AI service deletion fails, return error
       console.error('Error deleting document from AI service:', aiServiceError);
-      const statusCode = aiServiceError?.response?.status || 500;
-      const errorMessage =
-        aiServiceError?.response?.data?.error ||
-        'Failed to delete document from AI service';
-      return NextResponse.json({ error: errorMessage }, { status: statusCode });
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: statusCode || 500 }
+      );
     }
   } catch (error) {
     console.error('Error deleting document:', error);

@@ -140,7 +140,9 @@ export default function MissingConditionViewModal({
                   dangerouslySetInnerHTML={{ __html: condition.admin_notes }}
                 />
               ) : (
-                <div className="px-3 py-2 text-gray-500 italic">No admin notes</div>
+                <div className="px-3 py-2 text-gray-500 italic">
+                  No admin notes
+                </div>
               )}
             </div>
           </div>
@@ -178,4 +180,3 @@ export default function MissingConditionViewModal({
     </div>
   );
 }
-

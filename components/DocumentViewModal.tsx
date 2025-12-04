@@ -25,11 +25,14 @@ export default function DocumentViewModal({
     if (isOpen && fileUrl) {
       setIsLoading(true);
       setError(null);
-      
+
       // Determine file type and set appropriate viewer URL
       const normalizedType = fileType?.toLowerCase().trim() || '';
-      
-      if (normalizedType.includes('pdf') || documentName.toLowerCase().endsWith('.pdf')) {
+
+      if (
+        normalizedType.includes('pdf') ||
+        documentName.toLowerCase().endsWith('.pdf')
+      ) {
         // PDF - use direct URL
         setViewerUrl(fileUrl);
       } else if (
@@ -40,7 +43,9 @@ export default function DocumentViewModal({
       ) {
         // DOCX/DOC - use Microsoft Office Online viewer
         const encodedUrl = encodeURIComponent(fileUrl);
-        setViewerUrl(`https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`);
+        setViewerUrl(
+          `https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`
+        );
       } else if (
         normalizedType.includes('spreadsheetml') ||
         normalizedType.includes('ms-excel') ||
@@ -49,7 +54,9 @@ export default function DocumentViewModal({
       ) {
         // Excel - use Microsoft Office Online viewer
         const encodedUrl = encodeURIComponent(fileUrl);
-        setViewerUrl(`https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`);
+        setViewerUrl(
+          `https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`
+        );
       } else {
         // Default to direct URL
         setViewerUrl(fileUrl);
@@ -69,8 +76,11 @@ export default function DocumentViewModal({
   const handleError = () => {
     setIsLoading(false);
     const normalizedType = fileType?.toLowerCase().trim() || '';
-    
-    if (normalizedType.includes('pdf') || documentName.toLowerCase().endsWith('.pdf')) {
+
+    if (
+      normalizedType.includes('pdf') ||
+      documentName.toLowerCase().endsWith('.pdf')
+    ) {
       setError('Failed to load PDF. Please try again.');
     } else if (
       normalizedType.includes('wordprocessingml') ||
@@ -78,14 +88,18 @@ export default function DocumentViewModal({
       documentName.toLowerCase().endsWith('.docx') ||
       documentName.toLowerCase().endsWith('.doc')
     ) {
-      setError('Failed to load Word document. The file may be too large or the viewer service may be unavailable.');
+      setError(
+        'Failed to load Word document. The file may be too large or the viewer service may be unavailable.'
+      );
     } else if (
       normalizedType.includes('spreadsheetml') ||
       normalizedType.includes('ms-excel') ||
       documentName.toLowerCase().endsWith('.xlsx') ||
       documentName.toLowerCase().endsWith('.xls')
     ) {
-      setError('Failed to load Excel spreadsheet. The file may be too large or the viewer service may be unavailable.');
+      setError(
+        'Failed to load Excel spreadsheet. The file may be too large or the viewer service may be unavailable.'
+      );
     } else {
       setError('Failed to load document. Please try again.');
     }
@@ -93,17 +107,17 @@ export default function DocumentViewModal({
 
   if (!isOpen) return null;
 
-  const isPDF = 
-    fileType?.toLowerCase().includes('pdf') || 
+  const isPDF =
+    fileType?.toLowerCase().includes('pdf') ||
     documentName.toLowerCase().endsWith('.pdf');
-  
-  const isWord = 
+
+  const isWord =
     fileType?.toLowerCase().includes('wordprocessingml') ||
     fileType?.toLowerCase().includes('msword') ||
     documentName.toLowerCase().endsWith('.docx') ||
     documentName.toLowerCase().endsWith('.doc');
-  
-  const isExcel = 
+
+  const isExcel =
     fileType?.toLowerCase().includes('spreadsheetml') ||
     fileType?.toLowerCase().includes('ms-excel') ||
     documentName.toLowerCase().endsWith('.xlsx') ||
@@ -117,18 +131,42 @@ export default function DocumentViewModal({
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               {isPDF && (
-                <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               )}
               {isWord && (
-                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               )}
               {isExcel && (
-                <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               )}
             </div>
@@ -292,4 +330,3 @@ export default function DocumentViewModal({
     </div>
   );
 }
-

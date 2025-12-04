@@ -74,7 +74,7 @@ export default function DocumentModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate file type on submit as well
     if (formData.file) {
       const allowedTypes = [
@@ -85,17 +85,22 @@ export default function DocumentModal({
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ];
       const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
-      const fileExtension = '.' + formData.file.name.split('.').pop()?.toLowerCase();
-      
-      const isValidType = allowedTypes.includes(formData.file.type.toLowerCase());
+      const fileExtension =
+        '.' + formData.file.name.split('.').pop()?.toLowerCase();
+
+      const isValidType = allowedTypes.includes(
+        formData.file.type.toLowerCase()
+      );
       const isValidExtension = allowedExtensions.includes(fileExtension);
-      
+
       if (!isValidType && !isValidExtension) {
-        setFileError('Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.');
+        setFileError(
+          'Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.'
+        );
         return;
       }
     }
-    
+
     setIsUploading(true);
 
     try {
@@ -119,7 +124,7 @@ export default function DocumentModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setFileError('');
-    
+
     if (file) {
       // Allowed MIME types
       const allowedTypes = [
@@ -129,22 +134,24 @@ export default function DocumentModal({
         'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ];
-      
+
       // Allowed file extensions
       const allowedExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-      
+
       // Check both MIME type and file extension
       const isValidType = allowedTypes.includes(file.type.toLowerCase());
       const isValidExtension = allowedExtensions.includes(fileExtension);
-      
+
       if (!isValidType && !isValidExtension) {
-        setFileError('Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.');
+        setFileError(
+          'Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.'
+        );
         e.target.value = ''; // Clear the file input
         setFormData((prev) => ({ ...prev, file: undefined }));
         return;
       }
-      
+
       setFormData((prev) => ({ ...prev, file }));
     }
   };

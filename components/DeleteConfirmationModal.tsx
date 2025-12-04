@@ -42,8 +42,8 @@ export default function DeleteConfirmationModal({
 
         {/* Confirmation Message */}
         <p className="text-gray-600 text-center mb-6">
-          Are you sure you want to delete{' '}
-          <strong>{documentName}</strong>? This action cannot be undone.
+          Are you sure you want to delete <strong>{documentName}</strong>? This
+          action cannot be undone.
         </p>
 
         {/* Action Buttons */}
@@ -62,8 +62,8 @@ export default function DeleteConfirmationModal({
             {isDeleting
               ? 'Deleting...'
               : documentName.includes('document(s)')
-                ? 'Delete Documents'
-                : 'Delete Document'}
+              ? 'Delete Documents'
+              : 'Delete Document'}
           </button>
         </div>
       </div>

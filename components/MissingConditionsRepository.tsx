@@ -38,7 +38,8 @@ export default function MissingConditionsRepository() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedCondition, setSelectedCondition] = useState<MissingCondition | null>(null);
+  const [selectedCondition, setSelectedCondition] =
+    useState<MissingCondition | null>(null);
 
   // Fetch missing conditions
   const fetchConditions = async (page: number = 1) => {
@@ -48,13 +49,15 @@ export default function MissingConditionsRepository() {
         page: page.toString(),
         limit: itemsPerPage.toString(),
       });
-      
+
       if (statusFilter) {
         params.append('status', statusFilter);
       }
 
-      const response = await fetch(`/api/missing-conditions?${params.toString()}`);
-      
+      const response = await fetch(
+        `/api/missing-conditions?${params.toString()}`
+      );
+
       if (response.ok) {
         const data: MissingConditionsResponse = await response.json();
         setConditions(data.results || []);
@@ -114,7 +117,7 @@ export default function MissingConditionsRepository() {
   // Strip HTML tags and return plain text
   const stripHtml = (html: string | null): string => {
     if (!html) return '';
-    
+
     // Use DOM parser if available (client-side), otherwise use regex fallback
     if (typeof document !== 'undefined') {
       const tmp = document.createElement('div');
@@ -122,7 +125,7 @@ export default function MissingConditionsRepository() {
       const text = tmp.textContent || tmp.innerText || '';
       return text.trim().replace(/\s+/g, ' ');
     }
-    
+
     // Fallback: regex-based HTML tag removal
     return html
       .replace(/<[^>]*>/g, '') // Remove HTML tags
@@ -193,7 +196,9 @@ export default function MissingConditionsRepository() {
 
       {/* Conditions Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           .table-scroll-container {
             overflow-x: auto;
             scroll-behavior: smooth;
@@ -213,7 +218,9 @@ export default function MissingConditionsRepository() {
           .table-scroll-container::-webkit-scrollbar-thumb:hover {
             background: #555;
           }
-        `}} />
+        `,
+          }}
+        />
         <div className="table-scroll-container">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-10">
@@ -272,15 +279,18 @@ export default function MissingConditionsRepository() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div 
-                        className="text-sm text-gray-500 max-w-[200px]" 
+                      <div
+                        className="text-sm text-gray-500 max-w-[200px]"
                         title={stripHtml(condition.original_query)}
                       >
                         {formatText(condition.original_query, 50)}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
-                      <div className="max-w-[120px] truncate" title={condition.user_id}>
+                      <div
+                        className="max-w-[120px] truncate"
+                        title={condition.user_id}
+                      >
                         {condition.user_id}
                       </div>
                     </td>
@@ -294,20 +304,28 @@ export default function MissingConditionsRepository() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div 
-                        className="text-sm text-gray-500 max-w-[150px]" 
+                      <div
+                        className="text-sm text-gray-500 max-w-[150px]"
                         title={stripHtml(condition.admin_notes)}
                       >
-                        {condition.admin_notes ? formatText(condition.admin_notes, 40) : 'N/A'}
+                        {condition.admin_notes
+                          ? formatText(condition.admin_notes, 40)
+                          : 'N/A'}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                      <div className="max-w-[130px]" title={formatDate(condition.created_at)}>
+                      <div
+                        className="max-w-[130px]"
+                        title={formatDate(condition.created_at)}
+                      >
                         {formatDateShort(condition.created_at)}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                      <div className="max-w-[130px]" title={formatDate(condition.reviewed_at)}>
+                      <div
+                        className="max-w-[130px]"
+                        title={formatDate(condition.reviewed_at)}
+                      >
                         {formatDateShort(condition.reviewed_at)}
                       </div>
                     </td>
@@ -456,4 +474,3 @@ export default function MissingConditionsRepository() {
     </main>
   );
 }
-

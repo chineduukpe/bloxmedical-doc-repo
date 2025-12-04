@@ -6,7 +6,11 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
-import { embedBulkDocuments, deleteDocument } from '@/lib/ai-service';
+import {
+  embedBulkDocuments,
+  deleteDocument,
+  reEmbedDocuments,
+} from '@/lib/ai-service';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -27,10 +31,7 @@ export async function POST(request: NextRequest) {
     const files = formData.getAll('files') as File[];
 
     if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: 'No files provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
     // Validate file types - only allow Word, PDF, and Excel
@@ -46,10 +47,11 @@ export async function POST(request: NextRequest) {
     // Validate all files
     const invalidFiles: string[] = [];
     for (const file of files) {
-      const fileExtensionWithDot = '.' + file.name.split('.').pop()?.toLowerCase();
+      const fileExtensionWithDot =
+        '.' + file.name.split('.').pop()?.toLowerCase();
       const isValidType = allowedTypes.includes(file.type.toLowerCase());
       const isValidExtension = allowedExtensions.includes(fileExtensionWithDot);
-      
+
       if (!isValidType && !isValidExtension) {
         invalidFiles.push(file.name);
       }
@@ -57,16 +59,20 @@ export async function POST(request: NextRequest) {
 
     if (invalidFiles.length > 0) {
       return NextResponse.json(
-        { 
+        {
           error: `Invalid file types. Only Word documents (.doc, .docx), PDF (.pdf), and Excel files (.xls, .xlsx) are allowed.`,
-          invalidFiles 
+          invalidFiles,
         },
         { status: 400 }
       );
     }
 
     // Process all files
-    const fileData: Array<{ fileBuffer: Buffer; fileName: string; contentType: string }> = [];
+    const fileData: Array<{
+      fileBuffer: Buffer;
+      fileName: string;
+      contentType: string;
+    }> = [];
     const documentsToCreate: Array<{
       name: string;
       description: string;
@@ -107,7 +113,7 @@ export async function POST(request: NextRequest) {
 
       // Prepare document data for database
       const fileUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-      
+
       documentsToCreate.push({
         name: file.name,
         description: file.name,
@@ -186,9 +192,9 @@ export async function POST(request: NextRequest) {
       )
     );
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       documents: updatedDocuments,
-      count: updatedDocuments.length 
+      count: updatedDocuments.length,
     });
   } catch (error) {
     console.error('Error bulk uploading documents:', error);
@@ -254,9 +260,15 @@ export async function DELETE(request: NextRequest) {
     const deletePromises = names.map(async (fileName: string) => {
       try {
         const response = await deleteDocument(fileName);
-        return { fileName, success: response.status === 200 || response.status === 204 };
+        return {
+          fileName,
+          success: response.status === 200 || response.status === 204,
+        };
       } catch (error) {
-        console.error(`Error deleting document ${fileName} from AI service:`, error);
+        console.error(
+          `Error deleting document ${fileName} from AI service:`,
+          error
+        );
         return { fileName, success: false };
       }
     });
@@ -271,6 +283,22 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Trigger re-embedding asynchronously after successful deletion
+    // setImmediate(async () => {
+    //   try {
+    //     await reEmbedDocuments();
+    //     console.log(
+    //       'Re-embedding completed successfully after bulk document deletion'
+    //     );
+    //   } catch (error) {
+    //     console.error(
+    //       'Error re-embedding documents after bulk deletion:',
+    //       error
+    //     );
+    //     // Don't throw - this is fire-and-forget
+    //   }
+    // });
+
     return NextResponse.json({
       success: true,
       deletedCount: successfulDeletes.length,
@@ -284,4 +312,3 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-
