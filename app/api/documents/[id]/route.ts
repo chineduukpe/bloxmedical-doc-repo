@@ -139,8 +139,8 @@ export async function DELETE(
 
     try {
       // Call AI service to delete the document using ID
-      // The AI service endpoint is /documents/{id}
-      const aiServiceResponse = await deleteDocument(id);
+      // The AI service endpoint is POST /documents/delete with document_id array
+      const aiServiceResponse = await deleteDocument([id]);
 
       // Check if AI service returned success (200 or 204)
       if (

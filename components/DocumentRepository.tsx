@@ -160,8 +160,17 @@ export default function DocumentRepository({
     },
   });
 
-  const handleAddDocument = async (documentData: any) => {
-    addDocumentMutation.mutate(documentData);
+  const handleAddDocument = async (documentData: any): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      addDocumentMutation.mutate(documentData, {
+        onSuccess: () => {
+          resolve();
+        },
+        onError: (error) => {
+          reject(error);
+        },
+      });
+    });
   };
 
   const handleBulkUploadClick = () => {
@@ -240,9 +249,21 @@ export default function DocumentRepository({
     },
   });
 
-  const handleEditDocument = async (documentData: any) => {
-    if (!editingDocument) return;
-    editDocumentMutation.mutate({ documentId: editingDocument.id, documentData });
+  const handleEditDocument = async (documentData: any): Promise<void> => {
+    if (!editingDocument) return Promise.reject(new Error('No document selected for editing'));
+    return new Promise((resolve, reject) => {
+      editDocumentMutation.mutate(
+        { documentId: editingDocument.id, documentData },
+        {
+          onSuccess: () => {
+            resolve();
+          },
+          onError: (error) => {
+            reject(error);
+          },
+        }
+      );
+    });
   };
 
   const handleDeleteClick = (document: Document) => {
@@ -363,13 +384,13 @@ export default function DocumentRepository({
 
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
-    mutationFn: async (documentNames: string[]) => {
+    mutationFn: async (documentIds: string[]) => {
       const response = await fetch('/api/documents/bulk', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ names: documentNames }),
+        body: JSON.stringify({ ids: documentIds }),
       });
 
       if (!response.ok) {
@@ -392,11 +413,9 @@ export default function DocumentRepository({
 
   const handleBulkDeleteConfirm = async () => {
     if (selectedDocuments.size === 0) return;
-    // Get document names for selected documents
-    const selectedDocumentNames = documents
-      .filter((doc: Document) => selectedDocuments.has(doc.id))
-      .map((doc: Document) => doc.name);
-    bulkDeleteMutation.mutate(selectedDocumentNames);
+    // Get document IDs directly from selectedDocuments
+    const selectedDocumentIds = Array.from(selectedDocuments);
+    bulkDeleteMutation.mutate(selectedDocumentIds);
   };
 
   const isBulkDeleting = bulkDeleteMutation.isPending;

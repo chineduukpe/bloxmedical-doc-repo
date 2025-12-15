@@ -213,97 +213,67 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { names } = body; // Changed from ids to names
+    const { ids } = body;
 
-    if (!names || !Array.isArray(names) || names.length === 0) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { error: 'No document names provided' },
+        { error: 'No document IDs provided' },
         { status: 400 }
       );
     }
 
-    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
+    const documentIds = ids;
 
-    if (!aiServiceUrl) {
-      // Fallback to database if AI service is not configured
-      const documents = await prisma.document.findMany({
-        where: {
-          name: {
-            in: names,
-          },
-        },
-      });
+    try {
+      // Call AI service to delete the documents using IDs
+      // The AI service endpoint is POST /documents/delete with document_id array
+      const aiServiceResponse = await deleteDocument(documentIds);
 
-      if (documents.length === 0) {
+      // Check if AI service returned success (200 or 204)
+      if (
+        aiServiceResponse.status === 200 ||
+        aiServiceResponse.status === 204
+      ) {
+        return NextResponse.json({
+          success: true,
+          deletedCount: documentIds.length,
+        });
+      } else if (aiServiceResponse.status === 404) {
+        // Documents not found in AI service
         return NextResponse.json(
-          { error: 'No documents found' },
+          { error: 'Documents not found in AI service' },
+          { status: 404 }
+        );
+      } else {
+        // Other error from AI service
+        return NextResponse.json(
+          {
+            error: `AI service returned status ${aiServiceResponse.status}`,
+          },
+          { status: aiServiceResponse.status || 500 }
+        );
+      }
+    } catch (aiServiceError: any) {
+      // Handle errors gracefully
+      const statusCode = aiServiceError?.response?.status;
+      const errorMessage =
+        aiServiceError?.response?.data?.error ||
+        aiServiceError?.message ||
+        'Failed to delete documents from AI service';
+
+      if (statusCode === 404) {
+        return NextResponse.json(
+          { error: 'Documents not found in AI service' },
           { status: 404 }
         );
       }
 
-      // Delete from database only
-      const deleteResult = await prisma.document.deleteMany({
-        where: {
-          name: {
-            in: names,
-          },
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        deletedCount: deleteResult.count,
-      });
-    }
-
-    // Delete from AI service
-    const deletePromises = names.map(async (fileName: string) => {
-      try {
-        const response = await deleteDocument(fileName);
-        return {
-          fileName,
-          success: response.status === 200 || response.status === 204,
-        };
-      } catch (error) {
-        console.error(
-          `Error deleting document ${fileName} from AI service:`,
-          error
-        );
-        return { fileName, success: false };
-      }
-    });
-
-    const results = await Promise.all(deletePromises);
-    const successfulDeletes = results.filter((r) => r.success);
-
-    if (successfulDeletes.length === 0) {
+      console.error('Error deleting documents from AI service:', aiServiceError);
       return NextResponse.json(
-        { error: 'Failed to delete any documents from AI service' },
-        { status: 500 }
+        { error: errorMessage },
+        { status: statusCode || 500 }
       );
     }
-
-    // Trigger re-embedding asynchronously after successful deletion
-    // setImmediate(async () => {
-    //   try {
-    //     await reEmbedDocuments();
-    //     console.log(
-    //       'Re-embedding completed successfully after bulk document deletion'
-    //     );
-    //   } catch (error) {
-    //     console.error(
-    //       'Error re-embedding documents after bulk deletion:',
-    //       error
-    //     );
-    //     // Don't throw - this is fire-and-forget
-    //   }
-    // });
-
-    return NextResponse.json({
-      success: true,
-      deletedCount: successfulDeletes.length,
-      failedCount: results.length - successfulDeletes.length,
-    });
   } catch (error) {
     console.error('Error bulk deleting documents:', error);
     return NextResponse.json(

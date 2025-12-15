@@ -15,7 +15,7 @@ interface Document {
 interface DocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (document: Document) => void;
+  onSubmit: (document: Document) => Promise<void>;
   document?: Document | null;
   isEditing?: boolean;
 }
@@ -105,6 +105,8 @@ export default function DocumentModal({
 
     try {
       await onSubmit(formData);
+      // Only reset form and close on success
+      // The parent component will handle closing via mutation onSuccess
       setFormData({
         name: '',
         description: '',
@@ -113,9 +115,10 @@ export default function DocumentModal({
         fileUrl: '',
       });
       setFileError('');
-      onClose();
+      // Don't call onClose here - let the mutation's onSuccess handle it
     } catch (error) {
       console.error('Error submitting document:', error);
+      // Keep modal open on error so user can retry
     } finally {
       setIsUploading(false);
     }
@@ -167,7 +170,8 @@ export default function DocumentModal({
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 cursor-pointer"
+            disabled={isUploading}
+            className="text-gray-500 hover:text-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg
               className="w-6 h-6"
@@ -273,7 +277,8 @@ export default function DocumentModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer"
+              disabled={isUploading}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

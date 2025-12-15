@@ -115,17 +115,20 @@ export async function reEmbedDocuments(): Promise<any> {
 }
 
 /**
- * Delete a document from the AI service
- * @param documentId The ID of the document to delete
+ * Delete documents from the AI service
+ * @param documentIds Array of document IDs to delete
  * @returns Promise with the response from the delete endpoint
  */
-export async function deleteDocument(documentId: string): Promise<any> {
+export async function deleteDocument(documentIds: string[]): Promise<any> {
   if (!baseURL) {
     throw new Error('AI Service URL is not configured');
   }
 
-  const response = await aiService.delete(
-    `/documents/${encodeURIComponent(documentId)}`,
+  const response = await aiService.post(
+    `/documents/delete`,
+    {
+      document_id: documentIds,
+    },
     {
       timeout: 300000, // 300 seconds (5 minutes) timeout for document deletion
     }
