@@ -63,6 +63,7 @@ model User {
   createdDocuments Document[] @relation("DocumentCreator")
   updatedDocuments Document[] @relation("DocumentUpdater")
   auditLogs     AuditLog[]
+  photos         Photo[]
 
   @@map("bloxadmin_User")
 }
@@ -122,4 +123,19 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@map("bloxadmin_AuditLog")
+}
+
+model Photo {
+  id          String   @id @default(cuid())
+  documentId  String
+  description String
+  fileUrl     String
+  fileType    String?
+  uploadDate  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("bloxadmin_Photo")
 }
