@@ -136,3 +136,26 @@ export async function deleteDocument(documentIds: string[]): Promise<any> {
 
   return response;
 }
+
+/**
+ * Delete images from the AI service
+ * @param imageIds Array of image IDs to delete
+ * @returns Promise with the response from the delete endpoint
+ */
+export async function deleteImages(imageIds: string[]): Promise<any> {
+  if (!baseURL) {
+    throw new Error('AI Service URL is not configured');
+  }
+
+  const response = await aiService.post(
+    `/images/delete`,
+    {
+      image_ids: imageIds,
+    },
+    {
+      timeout: 300000, // 300 seconds (5 minutes) timeout for image deletion
+    }
+  );
+
+  return response;
+}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import ImageUploadModal from './ImageUploadModal';
 import ImageViewModal from './ImageViewModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 interface AIServiceImage {
   id: string;
@@ -49,6 +50,9 @@ export default function ImageRepository() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<Image | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState<Image | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [pagination, setPagination] = useState<
@@ -127,6 +131,50 @@ export default function ImageRepository() {
 
   const handleUploadSuccess = () => {
     fetchImages(currentPage, itemsPerPage);
+  };
+
+  const handleDeleteClick = (image: Image) => {
+    setImageToDelete(image);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false);
+    setImageToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!imageToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/images/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_ids: [imageToDelete.id],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete image');
+      }
+
+      toast.success('Image deleted successfully');
+      
+      // Close modal and refresh images
+      setIsDeleteModalOpen(false);
+      setImageToDelete(null);
+      fetchImages(currentPage, itemsPerPage);
+    } catch (error: any) {
+      console.error('Error deleting image:', error);
+      toast.error(error.message || 'Failed to delete image');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -329,11 +377,11 @@ export default function ImageRepository() {
                       <div className="flex space-x-3">
                         <button
                           onClick={() => handleViewImage(image)}
-                          className="text-[#107EAA] hover:text-[#0e6b8f] cursor-pointer flex items-center space-x-1"
+                          className="text-[#107EAA] hover:text-[#0e6b8f] cursor-pointer p-1 rounded hover:bg-[#107EAA]/10 transition-colors"
                           title="View image"
                         >
                           <svg
-                            className="w-4 h-4"
+                            className="w-5 h-5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -351,17 +399,16 @@ export default function ImageRepository() {
                               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                             />
                           </svg>
-                          <span className="text-xs">View</span>
                         </button>
                         <a
                           href={image.fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-green-600 hover:text-green-800 cursor-pointer flex items-center space-x-1"
+                          className="text-green-600 hover:text-green-800 cursor-pointer p-1 rounded hover:bg-green-100 transition-colors"
                           title="Download image"
                         >
                           <svg
-                            className="w-4 h-4"
+                            className="w-5 h-5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -373,8 +420,26 @@ export default function ImageRepository() {
                               d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                             />
                           </svg>
-                          <span className="text-xs">Download</span>
                         </a>
+                        <button
+                          onClick={() => handleDeleteClick(image)}
+                          className="text-red-600 hover:text-red-800 cursor-pointer p-1 rounded hover:bg-red-100 transition-colors"
+                          title="Delete image"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -484,6 +549,15 @@ export default function ImageRepository() {
           setSelectedImage(null);
         }}
         image={selectedImage}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        documentName={imageToDelete?.name || ''}
+        isDeleting={isDeleting}
       />
     </main>
   );
