@@ -105,6 +105,16 @@ export default function Header({ user }: HeaderProps) {
                 >
                   Missing Conditions
                 </Link>
+                <Link
+                  href="/images"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === '/images'
+                      ? 'bg-[#107EAA] text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-[#107EAA]/20'
+                  }`}
+                >
+                  Images
+                </Link>
               </>
             </nav>
           </div>

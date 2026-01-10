@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { prisma } from '@/lib/prisma';
 
 const s3Client = new S3Client({
@@ -25,7 +29,10 @@ export async function POST(request: NextRequest) {
 
     if (!documentId || !description || !files || files.length === 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: documentId, description, and files are required' },
+        {
+          error:
+            'Missing required fields: documentId, description, and files are required',
+        },
         { status: 400 }
       );
     }
@@ -42,7 +49,8 @@ export async function POST(request: NextRequest) {
 
     const invalidFiles: string[] = [];
     for (const file of files) {
-      const fileExtensionWithDot = '.' + file.name.split('.').pop()?.toLowerCase();
+      const fileExtensionWithDot =
+        '.' + file.name.split('.').pop()?.toLowerCase();
       const isValidType = allowedTypes.includes(file.type.toLowerCase());
       const isValidExtension = allowedExtensions.includes(fileExtensionWithDot);
 
@@ -54,7 +62,8 @@ export async function POST(request: NextRequest) {
     if (invalidFiles.length > 0) {
       return NextResponse.json(
         {
-          error: 'Invalid file types. Only image files (JPEG, PNG, GIF, WEBP) are allowed.',
+          error:
+            'Invalid file types. Only image files (JPEG, PNG, GIF, WEBP) are allowed.',
           invalidFiles,
         },
         { status: 400 }
@@ -177,5 +186,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
