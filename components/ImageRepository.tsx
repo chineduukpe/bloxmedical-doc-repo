@@ -53,6 +53,7 @@ export default function ImageRepository() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imageToDelete, setImageToDelete] = useState<Image | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [pagination, setPagination] = useState<
@@ -104,6 +105,8 @@ export default function ImageRepository() {
 
   useEffect(() => {
     fetchImages(currentPage, itemsPerPage);
+    // Clear selection when page changes
+    setSelectedImages(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
@@ -133,9 +136,35 @@ export default function ImageRepository() {
     fetchImages(currentPage, itemsPerPage);
   };
 
+  const handleSelectImage = (imageId: string) => {
+    setSelectedImages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(imageId)) {
+        newSet.delete(imageId);
+      } else {
+        newSet.add(imageId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedImages.size === filteredImages.length) {
+      setSelectedImages(new Set());
+    } else {
+      setSelectedImages(new Set(filteredImages.map((img) => img.id)));
+    }
+  };
+
   const handleDeleteClick = (image: Image) => {
     setImageToDelete(image);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedImages.size === 0) return;
+    setIsDeleteModalOpen(true);
+    setImageToDelete(null);
   };
 
   const handleDeleteCancel = () => {
@@ -144,6 +173,42 @@ export default function ImageRepository() {
   };
 
   const handleDeleteConfirm = async () => {
+    // Handle bulk delete
+    if (selectedImages.size > 0 && !imageToDelete) {
+      setIsDeleting(true);
+      try {
+        const imageIds = Array.from(selectedImages);
+        const response = await fetch('/api/images/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            image_ids: imageIds,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete images');
+        }
+
+        toast.success(`Successfully deleted ${imageIds.length} image(s)!`);
+        
+        // Close modal, clear selection, and refresh images
+        setIsDeleteModalOpen(false);
+        setSelectedImages(new Set());
+        fetchImages(currentPage, itemsPerPage);
+      } catch (error: any) {
+        console.error('Error deleting images:', error);
+        toast.error(error.message || 'Failed to delete images');
+      } finally {
+        setIsDeleting(false);
+      }
+      return;
+    }
+
+    // Handle single delete
     if (!imageToDelete) return;
 
     setIsDeleting(true);
@@ -164,6 +229,13 @@ export default function ImageRepository() {
       }
 
       toast.success('Image deleted successfully');
+      
+      // Remove from selection if it was selected
+      setSelectedImages((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(imageToDelete.id);
+        return newSet;
+      });
       
       // Close modal and refresh images
       setIsDeleteModalOpen(false);
@@ -279,6 +351,42 @@ export default function ImageRepository() {
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedImages.size > 0 && (
+        <div className="bg-[#107EAA] text-white px-6 py-3 rounded-lg mb-4 flex items-center justify-between">
+          <span className="font-medium">
+            {selectedImages.size} image(s) selected
+          </span>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSelectedImages(new Set())}
+              className="px-4 py-1.5 text-sm bg-white/20 hover:bg-white/30 rounded-md transition-colors"
+            >
+              Clear Selection
+            </button>
+            <button
+              onClick={handleBulkDeleteClick}
+              className="px-4 py-1.5 text-sm bg-red-600 hover:bg-red-700 rounded-md transition-colors flex items-center space-x-2"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <span>Delete Selected</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Images Grid */}
       {isLoading ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
@@ -299,6 +407,17 @@ export default function ImageRepository() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[50px]">
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredImages.length > 0 &&
+                        selectedImages.size === filteredImages.length
+                      }
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-[#107EAA] focus:ring-[#107EAA] cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Preview
                   </th>
@@ -324,7 +443,20 @@ export default function ImageRepository() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredImages.map((image) => (
-                  <tr key={image.id} className="hover:bg-gray-50">
+                  <tr
+                    key={image.id}
+                    className={`hover:bg-gray-50 ${
+                      selectedImages.has(image.id) ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedImages.has(image.id)}
+                        onChange={() => handleSelectImage(image.id)}
+                        className="rounded border-gray-300 text-[#107EAA] focus:ring-[#107EAA] cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-300 bg-gray-100">
                         <img
@@ -556,7 +688,11 @@ export default function ImageRepository() {
         isOpen={isDeleteModalOpen}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        documentName={imageToDelete?.name || ''}
+        documentName={
+          selectedImages.size > 0 && !imageToDelete
+            ? `${selectedImages.size} image(s)`
+            : imageToDelete?.name || ''
+        }
         isDeleting={isDeleting}
       />
     </main>
