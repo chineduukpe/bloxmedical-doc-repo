@@ -40,7 +40,8 @@ fi
 
 # Install dependencies
 echo "📥 Installing dependencies..."
-yarn install --frozen-lockfile --production=false
+# yarn install --frozen-lockfile --production=false
+yarn install  --production=false
 
 # Generate Prisma Client
 echo "🔧 Generating Prisma Client..."
