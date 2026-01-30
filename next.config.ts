@@ -1,6 +1,6 @@
 import type { NextConfig } from 'next';
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   serverExternalPackages: ['@prisma/client'],
   eslint: {
     ignoreDuringBuilds: true,
@@ -8,6 +8,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-};
+} as NextConfig;
 
 export default nextConfig;
