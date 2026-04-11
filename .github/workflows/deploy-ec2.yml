@@ -16,7 +16,13 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_PROD }}
           script: |
+            set -e
             cd /var/www/app
+
+            # Non-interactive SSH does not load .bashrc / nvm by default
+            export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+            export PATH="/usr/local/bin:/usr/bin:$HOME/.local/bin:$PATH"
 
             cat <<EOF > .env
             NODE_ENV=production
@@ -34,8 +40,12 @@ jobs:
             SMTP_PASS=${{ secrets.SMTP_PASSWORD }}
             EOF
 
-            git pull origin ec2-deploy
+            # Untracked lockfiles block pull/checkout when the branch tracks them
+            rm -f package-lock.json
+            git fetch origin ec2-deploy
+            git reset --hard FETCH_HEAD
+
             npm install
             npm run db:generate
             npm run build
-            # pm2 restart nextjs-app
+            pm2 restart nextjs-app
