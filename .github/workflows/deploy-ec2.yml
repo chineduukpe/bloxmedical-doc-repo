@@ -24,6 +24,14 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
             export PATH="/usr/local/bin:/usr/bin:$HOME/.local/bin:$PATH"
 
+            echo "=== Disk before cleanup ==="
+            df -h / /var/www 2>/dev/null || df -h .
+            df -i / 2>/dev/null || true
+
+            # Free space so .env / npm / build can write (rebuild .next on deploy)
+            rm -rf .next
+            command -v npm >/dev/null && npm cache clean --force || true
+
             cat <<EOF > .env
             NODE_ENV=production
             DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -43,8 +51,9 @@ jobs:
             # Untracked lockfiles block pull/checkout when the branch tracks them
             rm -f package-lock.json
             git fetch origin ec2-deploy
+            git reset --hard FETCH_HEAD
 
-            npm install --legacy-peer-deps
+            npm ci --legacy-peer-deps
             npm run db:generate
             npm run build
             # pm2 restart blox-admin
