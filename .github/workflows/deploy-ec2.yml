@@ -43,9 +43,8 @@ jobs:
             # Untracked lockfiles block pull/checkout when the branch tracks them
             rm -f package-lock.json
             git fetch origin ec2-deploy
-            git reset --hard FETCH_HEAD
 
-            npm ci --legacy-peer-deps
+            npm install --legacy-peer-deps
             npm run db:generate
             npm run build
             # pm2 restart blox-admin
