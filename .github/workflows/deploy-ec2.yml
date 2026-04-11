@@ -45,7 +45,7 @@ jobs:
             git fetch origin ec2-deploy
             git reset --hard FETCH_HEAD
 
-            npm install
+            npm ci --legacy-peer-deps
             npm run db:generate
             npm run build
-            pm2 restart nextjs-app
+            # pm2 restart blox-admin
