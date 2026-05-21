@@ -3,6 +3,16 @@ const { buildPgConfig } = require('../lib/pg-ssl.js');
 // const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
+function logEnvironmentVariables() {
+  const keys = Object.keys(process.env).sort();
+  console.log(`📋 Environment variables (${keys.length}):`);
+  for (const key of keys) {
+    console.log(`  ${key}=${process.env[key]}`);
+  }
+}
+
+logEnvironmentVariables();
+
 async function checkDatabaseConnection() {
   const connectionString =
     process.env.DATABASE_URL ||
